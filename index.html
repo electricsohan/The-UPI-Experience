@@ -107,6 +107,15 @@
     .screen-exit { animation: screen-exit 0.35s ease-in forwards; }
     .screen-enter-back { animation: screen-enter-back 0.4s ease-out both; }
 
+    /* QR scanner sweep line */
+    @keyframes scan-sweep { 0% { top: 0%; } 50% { top: calc(100% - 3px); } 100% { top: 0%; } }
+    .scan-line {
+      position: absolute; left: 0; right: 0; height: 3px; top: 0;
+      background: linear-gradient(90deg, transparent, #f97316, transparent);
+      box-shadow: 0 0 12px 3px rgba(249,115,22,.7);
+      animation: scan-sweep 1.3s ease-in-out infinite;
+    }
+
     /* Payee verified: card pops in */
     @keyframes pop-in { from { opacity:0; transform:translateY(8px) scale(0.96);} to { opacity:1; transform:translateY(0) scale(1);} }
     .pop-in { animation: pop-in 0.35s ease-out both; }
@@ -160,6 +169,7 @@
         <select id="flow-select" onchange="setBackendTab(this.value)" class="ui-select appearance-none bg-slate-900/90 border border-slate-700 hover:border-orange-500/60 focus:border-orange-500 focus:outline-none text-white text-base sm:text-xs font-bold rounded-xl pl-3.5 pr-9 py-2 cursor-pointer transition">
           <option value="pay" selected class="bg-[#0a0f1d]">Pay to VPA Flow</option>
           <option value="mobile" class="bg-[#0a0f1d]">Pay to Mobile Number Flow</option>
+          <option value="qr" class="bg-[#0a0f1d]">QR Payment Flow</option>
           <option value="pin" class="bg-[#0a0f1d]">Pin Set Flow</option>
           <option value="balance" class="bg-[#0a0f1d]">Check Balance Flow</option>
         </select>
@@ -571,6 +581,11 @@
         name: 'Rahul Sharma', vpa: 'rahul.sharma@bankB', mobileShown: '+91 9876543210', amount: '750'
       }
     };
+    PAYEE.qr = {
+      homeLabel: 'Scan QR', screenTitle: 'Scan & Pay', icon: 'store',
+      name: 'Merchant ABC', vpa: null, mobileShown: null, amount: '750',
+      amountLabel: 'Amount (pre-filled from QR)', verifiedLabel: 'Verified merchant'
+    };
     const DEBIT_ACCOUNTS = [
       { letter: 'A', bank: 'Bank A', sub: 'Savings •••• 4821' },
       { letter: 'C', bank: 'Bank C', sub: 'Current •••• 7733' }
@@ -587,8 +602,8 @@
 
       const ui = [
         {
-          title: 'User on FastPay+ Home Screen',
-          desc: `Payer opens the FastPay+ application and taps on <b>${P.homeLabel}</b> to initiate a transfer.`,
+          title: 'User on myUPI Home Screen',
+          desc: `Payer opens the myUPI application and taps on <b>${P.homeLabel}</b> to initiate a transfer.`,
           activeBlocks: ['block-payer-app'], activeWires: [], phoneState: 'home-screen'
         },
         {
@@ -620,6 +635,34 @@
         }
       ];
 
+      const qrUi = [
+        {
+          title: 'User on myUPI Home Screen',
+          desc: 'Payer opens the myUPI application and taps the <b>Scan QR</b> button.',
+          activeBlocks: ['block-payer-app'], activeWires: [], phoneState: 'home-screen'
+        },
+        {
+          title: 'Payer Scans Merchant QR [Scanning]',
+          desc: 'The camera opens and a scan animation runs over the merchant QR code until it is detected.',
+          activeBlocks: ['block-payer-app'], activeWires: [], phoneState: 'qr-scan'
+        },
+        {
+          title: 'QR Decoded: Merchant & Amount Pre-filled',
+          desc: `The QR is decoded: merchant name <b>${P.name}</b> is returned with the amount <b>₹750.00</b> pre-filled.`,
+          activeBlocks: ['block-payer-app'], activeWires: [], phoneState: 'qr-details'
+        },
+        {
+          title: 'Payer Selects Debit Account',
+          desc: 'Payer selects <b>Bank A (•••• 4821)</b> as the account to debit.',
+          activeBlocks: ['block-payer-app'], activeWires: [], phoneState: 'pay-account'
+        },
+        {
+          title: 'Payer Taps Proceed to Pay',
+          desc: 'Payer reviews the details and taps <b>Proceed to Pay</b> to start the transaction.',
+          activeBlocks: ['block-payer-app'], activeWires: [], phoneState: 'pay-proceed'
+        }
+      ];
+
       const core = PAY_CORE_STEPS.map(st => {
         const c = Object.assign({}, st);
         if (isMobile) {
@@ -631,18 +674,19 @@
         return c;
       });
 
-      return ui.concat(core).map((st, i) => Object.assign({}, st, { stepNum: i + 1 }));
+      return (kind === 'qr' ? qrUi : ui).concat(core).map((st, i) => Object.assign({}, st, { stepNum: i + 1 }));
     }
 
     const PAY_FLOW_STEPS = buildPayFlowSteps('pay');
     const MOBILE_FLOW_STEPS = buildPayFlowSteps('mobile');
+    const QR_FLOW_STEPS = buildPayFlowSteps('qr');
 
     // SEQUENTIAL PIN SET FLOW (22 STEPS, no CBS)
     const PIN_SET_FLOW_STEPS = [
       {
         stepNum: 1,
-        title: "User on FastPay+ Home Screen",
-        desc: "Payer opens the FastPay+ application and taps on <b>Reset PIN</b> to configure their UPI PIN.",
+        title: "User on myUPI Home Screen",
+        desc: "Payer opens the myUPI application and taps on <b>Reset PIN</b> to configure their UPI PIN.",
         activeBlocks: ['block-payer-app'],
         activeWires: [],
         phoneState: 'home-screen'
@@ -821,8 +865,8 @@
     const BALANCE_FLOW_STEPS = [
       {
         stepNum: 1,
-        title: "User on FastPay+ Home Screen",
-        desc: "Payer opens the FastPay+ application and taps on <b>Check Balance</b>.",
+        title: "User on myUPI Home Screen",
+        desc: "Payer opens the myUPI application and taps on <b>Check Balance</b>.",
         activeBlocks: ['block-payer-app'],
         activeWires: [],
         phoneState: 'home-screen'
@@ -830,7 +874,7 @@
       {
         stepNum: 2,
         title: "Payer Selects Account for Balance Check",
-        desc: "Payer on FastPay+ App selects <b>Bank A (•••• 4821)</b> to query available ledger balance.",
+        desc: "Payer on myUPI App selects <b>Bank A (•••• 4821)</b> to query available ledger balance.",
         activeBlocks: ['block-payer-app'],
         activeWires: [],
         phoneState: 'bal-select-acct'
@@ -1041,6 +1085,80 @@
       })();
     }
 
+    // Pseudo QR code (deterministic) drawn as SVG
+    function qrSvgHtml() {
+      const N = 25;
+      let seed = 7;
+      const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+      const finder = (x, y) => {
+        const fx = x < 7 ? x : x - (N - 7), fy = y < 7 ? y : y - (N - 7);
+        const inX = x < 8 || x >= N - 8, inY = y < 8 || y >= N - 8;
+        if (!((x < 8 && y < 8) || (x >= N - 8 && y < 8) || (x < 8 && y >= N - 8))) return null;
+        if (x === 7 || y === 7 || x === N - 8 || y === N - 8) return false;
+        const ring = fx === 0 || fx === 6 || fy === 0 || fy === 6;
+        const core = fx >= 2 && fx <= 4 && fy >= 2 && fy <= 4;
+        return ring || core;
+      };
+      let rects = '';
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          const f = finder(x, y);
+          const dark = f === null ? rnd() > 0.5 : f;
+          if (dark) rects += `<rect x="${x}" y="${y}" width="1.02" height="1.02"/>`;
+        }
+      }
+      return `<svg viewBox="0 0 ${N} ${N}" class="w-full h-full" fill="#0f172a" shape-rendering="crispEdges">${rects}</svg>`;
+    }
+
+    // Screen: camera viewfinder, scan line sweeps over the QR, then "QR detected"
+    function renderQrScanScreen(frame) {
+      const container = document.getElementById('phone-display-container');
+      const corner = (pos) => `<div class="qr-corner absolute w-9 h-9 border-orange-400 ${pos}"></div>`;
+      container.innerHTML = `
+        <div class="h-full flex flex-col bg-slate-900 text-white">
+          <div class="px-3 py-3 flex items-center gap-2">
+            <i data-lucide="chevron-left" class="w-5 h-5 text-slate-300"></i>
+            <h3 class="text-sm font-bold">Scan QR Code</h3>
+          </div>
+          <div class="flex-1 flex flex-col items-center justify-center px-6 pb-10">
+            <div class="relative w-[240px] h-[240px]">
+              ${corner('top-0 left-0 border-t-4 border-l-4 rounded-tl-2xl')}
+              ${corner('top-0 right-0 border-t-4 border-r-4 rounded-tr-2xl')}
+              ${corner('bottom-0 left-0 border-b-4 border-l-4 rounded-bl-2xl')}
+              ${corner('bottom-0 right-0 border-b-4 border-r-4 rounded-br-2xl')}
+              <div class="absolute inset-4 rounded-xl bg-white p-2 overflow-hidden">
+                ${qrSvgHtml()}
+                <div id="qr-scan-line" class="scan-line"></div>
+              </div>
+              <div id="qr-detected" class="hidden absolute inset-4 rounded-xl bg-emerald-500/25 items-center justify-center">
+                <div class="pop-in w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/40">
+                  <i data-lucide="check" class="w-9 h-9 stroke-[4]"></i>
+                </div>
+              </div>
+            </div>
+            <p id="qr-status" class="mt-8 text-xs font-bold text-slate-300 text-center">Align the QR code within the frame</p>
+          </div>
+        </div>`;
+
+      (async () => {
+        await sleep(600);
+        if (!frameLive(frame)) return;
+        const st = document.getElementById('qr-status');
+        if (st) st.textContent = 'Scanning...';
+        await sleep(1900);
+        if (!frameLive(frame)) return;
+        const line = document.getElementById('qr-scan-line');
+        if (line) line.style.display = 'none';
+        document.querySelectorAll('#phone-display-container .qr-corner').forEach(c => {
+          c.classList.remove('border-orange-400');
+          c.classList.add('border-emerald-400');
+        });
+        const det = document.getElementById('qr-detected');
+        if (det) { det.classList.remove('hidden'); det.classList.add('flex'); }
+        if (st) { st.textContent = 'QR detected'; st.classList.remove('text-slate-300'); st.classList.add('text-emerald-400'); }
+      })();
+    }
+
     function acctRowHtml(i, selected) {
       const a = DEBIT_ACCOUNTS[i];
       return `
@@ -1067,13 +1185,13 @@
       const payeeSub = P.vpa
         ? `<div class="text-[11px] text-slate-500 font-mono truncate">${P.vpa}</div>
            <div class="text-[10px] text-slate-400 font-mono">${P.mobileShown}</div>`
-        : `<div class="text-[10px] text-emerald-700 font-bold">Verified payee</div>`;
+        : `<div class="text-[10px] text-emerald-700 font-bold">${P.verifiedLabel || 'Verified payee'}</div>`;
 
       container.innerHTML = `
         <div class="h-full flex flex-col py-2 px-2 bg-slate-50">
           ${payHeaderHtml(P)}
           <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm space-y-3">
-            <div id="pay-payee-card" class="flex items-center gap-3 pb-3 border-b border-slate-100 ${state === 'pay-amount' ? 'pop-in' : ''}">
+            <div id="pay-payee-card" class="flex items-center gap-3 pb-3 border-b border-slate-100 ${(state === 'pay-amount' || state === 'qr-details') ? 'pop-in' : ''}">
               <div class="w-10 h-10 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
                 <i data-lucide="${P.icon}" class="w-5 h-5"></i>
               </div>
@@ -1087,13 +1205,13 @@
             </div>
 
             <div class="text-center py-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <span class="text-[10px] tracking-wider text-slate-500 font-bold block mb-1">Enter Amount</span>
+              <span class="text-[10px] tracking-wider text-slate-500 font-bold block mb-1">${P.amountLabel || 'Enter Amount'}</span>
               <div class="flex items-center justify-center text-4xl font-black text-slate-900 font-mono tracking-tight">
                 <span>₹</span><span id="pay-amt-text">${amtFilled ? P.amount : ''}</span><span id="pay-amt-caret" class="w-0.5 h-8 bg-orange-500 animate-pulse ml-0.5 ${amtFilled ? 'hidden' : ''}"></span>
               </div>
             </div>
 
-            <div id="pay-acct-wrap" class="space-y-2 transition-opacity duration-300 ${state === 'pay-amount' ? 'opacity-40' : ''}">
+            <div id="pay-acct-wrap" class="space-y-2 transition-opacity duration-300 ${(state === 'pay-amount' || state === 'qr-details') ? 'opacity-40' : ''}">
               <span class="text-[10px] text-slate-400 block font-bold">Paying From</span>
               <div id="pay-acct-list" class="space-y-2">
                 ${acctRowHtml(0, acctSelected)}
@@ -1119,6 +1237,11 @@
           }
           const caret = document.getElementById('pay-amt-caret');
           if (caret) caret.classList.add('hidden');
+          const wrap = document.getElementById('pay-acct-wrap');
+          if (wrap) wrap.classList.remove('opacity-40');
+        } else if (state === 'qr-details') {
+          await sleep(900);
+          if (!frameLive(frame)) return;
           const wrap = document.getElementById('pay-acct-wrap');
           if (wrap) wrap.classList.remove('opacity-40');
         } else if (state === 'pay-account') {
@@ -1178,8 +1301,7 @@
               <div class="px-4 py-4 flex items-center justify-between">
                 <div class="flex items-center gap-1.5">
                   <div class="w-4 h-4 rounded-full border-4 border-orange-500"></div>
-                  <span class="text-sm font-black text-slate-900 tracking-tight">FASTPAY <span class="text-orange-500">+</span></span>
-                  <span class="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded ml-1">UPI</span>
+                  <span class="text-sm font-black text-slate-900 tracking-tight">myUPI <span class="text-orange-500">+</span></span>
                 </div>
                 <div class="flex items-center gap-3 text-slate-400">
                   <i data-lucide="rotate-cw" class="w-4 h-4"></i>
@@ -1201,11 +1323,11 @@
                     <span class="text-[9px] leading-tight font-bold text-slate-700">Pay Mobile</span>
                   </button>
                   <button id="sim-btn-balance" class="flex flex-col items-center justify-center px-1 py-3 rounded-2xl text-center border border-slate-100 shadow-sm bg-white transition-transform duration-100 ghost-press">
-                    <span class="text-2xl mb-1">👛</span>
+                    <i data-lucide="wallet" class="w-6 h-6 text-orange-500 mb-2"></i>
                     <span class="text-[9px] leading-tight font-bold text-slate-700">Check Balance</span>
                   </button>
                   <button id="sim-btn-pin" class="flex flex-col items-center justify-center px-1 py-3 rounded-2xl text-center border border-slate-100 shadow-sm bg-white transition-transform duration-100 ghost-press">
-                    <i data-lucide="key" class="w-6 h-6 text-slate-500 mb-2"></i>
+                    <i data-lucide="key-round" class="w-6 h-6 text-orange-500 mb-2"></i>
                     <span class="text-[9px] leading-tight font-bold text-slate-700">Reset PIN</span>
                   </button>
                 </div>
@@ -1217,13 +1339,11 @@
                   <i data-lucide="home" class="w-5 h-5 mb-1"></i>
                   <span class="text-[9px] font-bold">Home</span>
                 </div>
-                <div class="flex flex-col items-center">
-                  <i data-lucide="qr-code" class="w-5 h-5 mb-1"></i>
-                  <span class="text-[9px] font-bold">Scan QR</span>
-                </div>
-                <div class="flex flex-col items-center">
-                  <i data-lucide="layers" class="w-5 h-5 mb-1"></i>
-                  <span class="text-[9px] font-bold">Collect</span>
+                <div class="flex flex-col items-center -mt-7">
+                  <button id="sim-nav-scan" class="w-14 h-14 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/30 border-4 border-white ring-1 ring-orange-100 transition-transform duration-100">
+                    <i data-lucide="qr-code" class="w-6 h-6"></i>
+                  </button>
+                  <span class="text-[9px] font-bold mt-1 text-slate-500">Scan QR</span>
                 </div>
                 <div class="flex flex-col items-center">
                   <i data-lucide="clock" class="w-5 h-5 mb-1"></i>
@@ -1239,13 +1359,15 @@
               let btnId = '';
               if (currentFlowType === 'pay') btnId = 'sim-btn-pay';
               if (currentFlowType === 'mobile') btnId = 'sim-btn-mobile';
+              if (currentFlowType === 'qr') btnId = 'sim-nav-scan';
               if (currentFlowType === 'pin') btnId = 'sim-btn-pin';
               if (currentFlowType === 'balance') btnId = 'sim-btn-balance';
               
               const btn = document.getElementById(btnId);
               if(btn) {
-                btn.classList.add('scale-95', 'bg-slate-50', 'border-orange-200');
-                setTimeout(() => btn.classList.remove('scale-95', 'bg-slate-50', 'border-orange-200'), 200);
+                const pressed = btnId === 'sim-nav-scan' ? ['scale-90', 'ring-4', 'ring-orange-200'] : ['scale-95', 'bg-slate-50', 'border-orange-200'];
+                btn.classList.add(...pressed);
+                setTimeout(() => btn.classList.remove(...pressed), 200);
               }
             }
           }, 600);
@@ -1256,7 +1378,12 @@
           renderPayEntryScreen(state, currentFrame);
           break;
 
+        case 'qr-scan':
+          renderQrScanScreen(currentFrame);
+          break;
+
         case 'pay-amount':
+        case 'qr-details':
         case 'pay-account':
         case 'pay-proceed':
           renderPayDetailsScreen(state, currentFrame);
@@ -1579,11 +1706,13 @@
     };
 
     FLOW_ARROWS.mobile = FLOW_ARROWS.pay;
+    FLOW_ARROWS.qr = FLOW_ARROWS.pay;
 
-    const FLOW_VIEWBOX = { pay: '0 30 1040 580', mobile: '0 30 1040 580', pin: '0 30 790 370', balance: '0 30 1040 370' };
+    const FLOW_VIEWBOX = { pay: '0 30 1040 580', mobile: '0 30 1040 580', qr: '0 30 1040 580', pin: '0 30 790 370', balance: '0 30 1040 370' };
     const FLOW_HIDDEN_BLOCKS = {
       pay: [],
       mobile: [],
+      qr: [],
       balance: ['block-payee-psp', 'block-payee-bank', 'block-payee-cbs'],
       pin: ['block-payee-psp', 'block-payee-bank', 'block-payee-cbs', 'block-payer-cbs']
     };
@@ -1644,7 +1773,7 @@
       injectSvgWires(tab);
 
       const total = getActiveSteps().length;
-      const names = { pay: 'Pay to VPA Flow', mobile: 'Pay to Mobile Number Flow', pin: 'Pin Set Flow', balance: 'Balance Enquiry' };
+      const names = { pay: 'Pay to VPA Flow', mobile: 'Pay to Mobile Number Flow', qr: 'QR Payment Flow', pin: 'Pin Set Flow', balance: 'Balance Enquiry' };
       const titleEl = document.getElementById('fs-step-title');
       const badgeEl = document.getElementById('fs-step-badge');
       if (titleEl) titleEl.innerText = `${total}-Step ${names[tab]} Ready`;
@@ -1675,6 +1804,7 @@
       if (currentFlowType === 'pin') return PIN_SET_FLOW_STEPS;
       if (currentFlowType === 'balance') return BALANCE_FLOW_STEPS;
       if (currentFlowType === 'mobile') return MOBILE_FLOW_STEPS;
+      if (currentFlowType === 'qr') return QR_FLOW_STEPS;
       return PAY_FLOW_STEPS;
     }
 
@@ -1789,6 +1919,10 @@
           delay = 3200; // typing animation + Verify tap
         } else if (state === 'pay-verifying') {
           delay = 1600; // processing animation
+        } else if (state === 'qr-scan') {
+          delay = 3300; // scan sweep + QR detected
+        } else if (state === 'qr-details') {
+          delay = 1800; // merchant + pre-filled amount
         } else if (state === 'pay-amount') {
           delay = 2000; // payee card + amount typing
         } else if (state === 'pay-account') {
