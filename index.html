@@ -46,7 +46,7 @@
       transition: background-color .25s ease, border-color .25s ease, color .25s ease;
     }
     .ui-grid-bg {
-      background-image: linear-gradient(to right, #131c33 1px, transparent 1px), linear-gradient(to bottom, #131c33 1px, transparent 1px);
+      background-image: linear-gradient(to right, #e5e7eb 1px, transparent 1px), linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
       background-size: 20px 20px;
     }
     .ui-theme-btn { background: rgba(15,23,42,.9); border: 1px solid #334155; color: #e2e8f0; }
@@ -72,20 +72,20 @@
 
     /* Diagram in light mode: pale tinted blocks with dark text, same accent strokes */
     #flow-svg rect, #flow-svg text { transition: fill .25s ease; }
-    html.light #flow-svg rect[filter] { filter: none; }
-    html.light #svg-wires-group path:not(.wire-active) { stroke: #94a3b8; }
-    html.light #arrow-neutral path { fill: #94a3b8; }
-    html.light #svg-wires-group text { fill: #64748b; stroke: #ffffff; }
-    html.light #svg-wires-group tspan[fill] { fill: #ea580c; }
-    html.light #block-central-switch rect { fill: #eef2ff; } html.light #block-central-switch text { fill: #1e1b4b; }
-    html.light #block-payer-psp rect { fill: #fff7ed; }      html.light #block-payer-psp text { fill: #9a3412; }
-    html.light #block-payee-psp rect { fill: #f0f9ff; }      html.light #block-payee-psp text { fill: #075985; }
-    html.light #block-payer-bank rect { fill: #ecfdf5; }     html.light #block-payer-bank text { fill: #065f46; }
-    html.light #block-payee-bank rect { fill: #faf5ff; }     html.light #block-payee-bank text { fill: #6b21a8; }
-    html.light #block-cl rect { fill: #eef2ff; }             html.light #block-cl text { fill: #3730a3; }
-    html.light #block-payer-hsm rect { fill: #f0fdfa; }      html.light #block-payer-hsm text { fill: #0f766e; }
-    html.light #block-payer-cbs rect { fill: #ecfdf5; }      html.light #block-payer-cbs text { fill: #047857; }
-    html.light #block-payee-cbs rect { fill: #faf5ff; }      html.light #block-payee-cbs text { fill: #7e22ce; }
+    #flow-svg rect[filter] { filter: none; }
+    #svg-wires-group path:not(.wire-active) { stroke: #94a3b8; }
+    #arrow-neutral path { fill: #94a3b8; }
+    #svg-wires-group text { fill: #64748b; stroke: #f9fafb; }
+    #svg-wires-group tspan[fill] { fill: #ea580c; }
+    #block-central-switch rect { fill: #eef2ff; } #block-central-switch text { fill: #1e1b4b; }
+    #block-payer-psp rect { fill: #fff7ed; }      #block-payer-psp text { fill: #9a3412; }
+    #block-payee-psp rect { fill: #f0f9ff; }      #block-payee-psp text { fill: #075985; }
+    #block-payer-bank rect { fill: #ecfdf5; }     #block-payer-bank text { fill: #065f46; }
+    #block-payee-bank rect { fill: #faf5ff; }     #block-payee-bank text { fill: #6b21a8; }
+    #block-cl rect { fill: #eef2ff; }             #block-cl text { fill: #3730a3; }
+    #block-payer-hsm rect { fill: #f0fdfa; }      #block-payer-hsm text { fill: #0f766e; }
+    #block-payer-cbs rect { fill: #ecfdf5; }      #block-payer-cbs text { fill: #047857; }
+    #block-payee-cbs rect { fill: #faf5ff; }      #block-payee-cbs text { fill: #7e22ce; }
 
     /* Spinning Loader */
     @keyframes spinner {
@@ -212,19 +212,22 @@
         </div>
 
     <!-- Two-pane workspace: phone (left) + flow diagram (right) -->
-    <div class="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 min-h-0">
+    <div class="flex-1 grid grid-cols-1 xl:grid-cols-[400px_minmax(0,1fr)] gap-4 sm:gap-6 min-h-0">
 
     
     <!-- ======================================================================= -->
     <!-- LEFT PANE: HARDWARE TERMINAL MOBILE DISPLAY (NON-TOUCHABLE)             -->
     <!-- ======================================================================= -->
-    <section class="xl:col-span-4 flex flex-col items-center justify-center shrink-0">
+    <section class="flex flex-col shrink-0">
+      <div class="journey-box flex-1 flex flex-col rounded-2xl overflow-hidden border border-gray-300 bg-gray-50 shadow-xl">
+        <div class="bg-gray-300 text-gray-800 px-4 py-2 text-sm font-bold border-b border-gray-400/50">Journey</div>
+        <div class="flex-1 flex items-center justify-center p-3">
       
       <!-- Terminal Device Outer Bezel -->
-      <div class="w-full max-w-[370px] h-[730px] rounded-[48px] p-3 bg-gradient-to-b from-slate-200 via-slate-300 to-slate-400 border-4 border-slate-400/80 shadow-2xl relative flex flex-col overflow-hidden">
+      <div class="w-full max-w-[370px] h-[730px] rounded-[48px] p-3 bg-black border-4 border-neutral-800 shadow-2xl relative flex flex-col overflow-hidden">
         
         <!-- Dynamic Camera Island -->
-        <div class="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-5 bg-slate-900 rounded-full z-40 flex items-center justify-center pointer-events-none">
+        <div class="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-5 bg-black border border-neutral-800 rounded-full z-40 flex items-center justify-center pointer-events-none">
           <div class="w-2.5 h-2.5 rounded-full bg-slate-800 mr-2 border border-slate-700"></div>
           <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
         </div>
@@ -270,15 +273,19 @@
         </div>
       </div>
 
+        </div>
+      </div>
     </section>
 
     <!-- ======================================================================= -->
     <!-- RIGHT PANE: SVG ARCHITECTURAL DIAGRAM                                   -->
     <!-- ======================================================================= -->
-    <section class="xl:col-span-8 flex flex-col min-h-0 gap-4">
+    <section class="flex flex-col min-h-0 gap-4">
       
       <!-- Flow Diagram Card (fills the whole right pane) -->
-      <div class="flex-1 min-h-[560px] xl:min-h-0 flex flex-col bg-[#0b101d] rounded-3xl border border-slate-800 p-3 sm:p-5 relative overflow-hidden shadow-2xl ui-card ui-grid-bg">
+      <div class="backend-box flex-1 min-h-[560px] xl:min-h-0 flex flex-col rounded-2xl border border-gray-300 bg-gray-50 overflow-hidden shadow-xl">
+        <div class="bg-gray-300 text-gray-800 px-4 py-2 text-sm font-bold border-b border-gray-400/50 shrink-0">Backend Flow</div>
+        <div class="flex-1 min-h-0 flex flex-col p-3 sm:p-5 relative ui-grid-bg">
 
         <!-- SVG Topology Canvas (viewBox is set per flow in setBackendTab) -->
         <div class="flex-1 relative min-h-0 flex items-center justify-center overflow-hidden">
@@ -345,6 +352,7 @@
 
       </div>
 
+        </div>
     </section>
 
     </div>
@@ -569,22 +577,22 @@
       pay: {
         homeLabel: 'Pay VPA', screenTitle: 'Pay to VPA', fieldLabel: 'Payee VPA',
         placeholder: 'name@bank', hint: 'Enter the payee\'s UPI ID, e.g. name@bank',
-        prefix: '', input: 'merchantABC@bankB', typeMs: 75,
+        prefix: '', input: 'sohan@mypsp', typeMs: 75,
         verifyingText: 'Verifying VPA...', icon: 'store',
-        name: 'Merchant ABC', vpa: null, mobileShown: null, amount: '750'
+        name: 'Sohan B', vpa: null, mobileShown: null, amount: '750', handle: '@mypsp'
       },
       mobile: {
         homeLabel: 'Pay Mobile', screenTitle: 'Pay to Mobile Number', fieldLabel: 'Payee Mobile Number',
         placeholder: '10-digit mobile number', hint: 'Enter the mobile number linked to the payee\'s UPI account',
         prefix: '+91', input: '9876543210', typeMs: 110,
         verifyingText: 'Verifying mobile number...', icon: 'user-round',
-        name: 'Rahul Sharma', vpa: 'rahul.sharma@bankB', mobileShown: '+91 9876543210', amount: '750'
+        name: 'Sohan B', vpa: 'sohan@mypsp', mobileShown: '+91 9876543210', amount: '750', handle: '@mypsp'
       }
     };
     PAYEE.qr = {
       homeLabel: 'Scan QR', screenTitle: 'Scan & Pay', icon: 'store',
       name: 'Merchant ABC', vpa: null, mobileShown: null, amount: '750',
-      amountLabel: 'Amount (pre-filled from QR)', verifiedLabel: 'Verified merchant'
+      amountLabel: 'Amount (pre-filled from QR)', verifiedLabel: 'Verified merchant', handle: '@bankB'
     };
     const DEBIT_ACCOUNTS = [
       { letter: 'A', bank: 'Bank A', sub: 'Savings •••• 4821' },
@@ -665,11 +673,13 @@
 
       const core = PAY_CORE_STEPS.map(st => {
         const c = Object.assign({}, st);
-        if (isMobile) {
+        c.desc = c.desc.replace('@bankB', P.handle);
+        if (kind !== 'qr') {
           c.title = c.title.replace('merchant', 'payee');
-          c.desc = c.desc
-            .replace('with Payer VPA, Payee VPA, and BIC.', `with Payer VPA, Payee VPA (<code>${P.vpa}</code>, resolved from the mobile number), and BIC.`)
-            .replace('merchant account', 'payee account');
+          c.desc = c.desc.replace('merchant account', 'payee account');
+        }
+        if (isMobile) {
+          c.desc = c.desc.replace('with Payer VPA, Payee VPA, and BIC.', `with Payer VPA, Payee VPA (<code>${P.vpa}</code>, resolved from the mobile number), and BIC.`);
         }
         return c;
       });
