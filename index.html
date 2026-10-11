@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>FastPay+ Unified Architecture & Hardware Terminal</title>
+  <title>The UPI Experience</title>
   <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <!-- Lucide Icons CDN -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.383.0/dist/umd/lucide.min.js"></script>
   <!-- Canvas Confetti CDN -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
@@ -35,6 +35,58 @@
       animation: wire-dash 0.9s linear infinite;
     }
 
+    /* Diagram block highlight: scale around the block's own centre */
+    #flow-svg g[id^="block-"] { transform-box: fill-box; transform-origin: center; }
+    #flow-svg g.block-active { transform: scale(1.06); }
+
+    /* ===================== THEME (dark = default, light = mobile-app look) ===================== */
+    html { color-scheme: dark; }
+    html.light { color-scheme: light; }
+    .ui-page, .ui-header, .ui-strip, .ui-card, .ui-select, .ui-btn-nav, .ui-badge, .ui-title, .ui-theme-btn {
+      transition: background-color .25s ease, border-color .25s ease, color .25s ease;
+    }
+    .ui-grid-bg {
+      background-image: linear-gradient(to right, #131c33 1px, transparent 1px), linear-gradient(to bottom, #131c33 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    .ui-theme-btn { background: rgba(15,23,42,.9); border: 1px solid #334155; color: #e2e8f0; }
+    .ui-theme-btn:hover { border-color: rgba(249,115,22,.6); }
+
+    html.light ::-webkit-scrollbar-thumb { background: #cbd5e1; }
+    html.light .ui-page { background: #f1f5f9; color: #0f172a; }
+    html.light .ui-header { background: #ffffff; border-color: #e2e8f0; }
+    html.light .ui-title { color: #0f172a; }
+    html.light .ui-theme-btn { background: #ffffff; border-color: #cbd5e1; color: #334155; }
+    html.light .ui-select { background: #ffffff; border-color: #cbd5e1; color: #0f172a; }
+    html.light .ui-select:hover { border-color: rgba(249,115,22,.6); }
+    html.light .ui-select:focus { border-color: #f97316; }
+    html.light .ui-select option { background: #ffffff; color: #0f172a; }
+    html.light .ui-strip { background: #ffffff; border-color: #e2e8f0; box-shadow: 0 1px 3px rgba(15,23,42,.08); }
+    html.light .ui-badge { background: #fff7ed; color: #ea580c; border-color: #fed7aa; }
+    html.light .ui-btn-nav { background: #0f172a; color: #ffffff; }
+    html.light .ui-btn-nav:hover { background: #334155; }
+    html.light .ui-card { background: #ffffff; border-color: #e2e8f0; box-shadow: 0 10px 30px rgba(15,23,42,.08); }
+    html.light .ui-grid-bg {
+      background-image: linear-gradient(to right, #eef2f7 1px, transparent 1px), linear-gradient(to bottom, #eef2f7 1px, transparent 1px);
+    }
+
+    /* Diagram in light mode: pale tinted blocks with dark text, same accent strokes */
+    #flow-svg rect, #flow-svg text { transition: fill .25s ease; }
+    html.light #flow-svg rect[filter] { filter: none; }
+    html.light #svg-wires-group path:not(.wire-active) { stroke: #94a3b8; }
+    html.light #arrow-neutral path { fill: #94a3b8; }
+    html.light #svg-wires-group text { fill: #64748b; stroke: #ffffff; }
+    html.light #svg-wires-group tspan[fill] { fill: #ea580c; }
+    html.light #block-central-switch rect { fill: #eef2ff; } html.light #block-central-switch text { fill: #1e1b4b; }
+    html.light #block-payer-psp rect { fill: #fff7ed; }      html.light #block-payer-psp text { fill: #9a3412; }
+    html.light #block-payee-psp rect { fill: #f0f9ff; }      html.light #block-payee-psp text { fill: #075985; }
+    html.light #block-payer-bank rect { fill: #ecfdf5; }     html.light #block-payer-bank text { fill: #065f46; }
+    html.light #block-payee-bank rect { fill: #faf5ff; }     html.light #block-payee-bank text { fill: #6b21a8; }
+    html.light #block-cl rect { fill: #eef2ff; }             html.light #block-cl text { fill: #3730a3; }
+    html.light #block-payer-hsm rect { fill: #f0fdfa; }      html.light #block-payer-hsm text { fill: #0f766e; }
+    html.light #block-payer-cbs rect { fill: #ecfdf5; }      html.light #block-payer-cbs text { fill: #047857; }
+    html.light #block-payee-cbs rect { fill: #faf5ff; }      html.light #block-payee-cbs text { fill: #7e22ce; }
+
     /* Spinning Loader */
     @keyframes spinner {
       to { transform: rotate(360deg); }
@@ -47,6 +99,17 @@
     .ghost-press {
       transition: all 0.1s ease-in-out;
     }
+
+
+    /* Return-to-home transition (end of every flow) */
+    @keyframes screen-exit { from { opacity:1; transform:translateX(0) scale(1);} to { opacity:0; transform:translateX(24px) scale(0.96);} }
+    @keyframes screen-enter-back { from { opacity:0; transform:translateX(-24px) scale(0.98);} to { opacity:1; transform:translateX(0) scale(1);} }
+    .screen-exit { animation: screen-exit 0.35s ease-in forwards; }
+    .screen-enter-back { animation: screen-enter-back 0.4s ease-out both; }
+
+    /* Payee verified: card pops in */
+    @keyframes pop-in { from { opacity:0; transform:translateY(8px) scale(0.96);} to { opacity:1; transform:translateY(0) scale(1);} }
+    .pop-in { animation: pop-in 0.35s ease-out both; }
 
     /* Rotating Device Animation */
     @keyframes rotate-phone {
@@ -66,40 +129,41 @@
     }
   </style>
 </head>
-<body class="bg-[#05070e] text-slate-100 min-h-screen flex flex-col font-sans antialiased select-none overflow-x-hidden">
+<body class="ui-page bg-[#05070e] text-slate-100 min-h-screen flex flex-col font-sans antialiased select-none overflow-x-hidden">
 
   <!-- ========================================================================= -->
   <!-- TOP GLOBAL CONTROL HEADER                                                -->
   <!-- ========================================================================= -->
-  <header class="h-14 bg-[#0a0f1d] border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30">
+  <header class="ui-header h-14 bg-[#0a0f1d] border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-xl bg-orange-500/10 border border-orange-500/40 text-orange-400 flex items-center justify-center shadow-lg shadow-orange-500/20">
-        <i data-lucide="cpu" class="w-4 h-4"></i>
+      <!-- NPCI logo (white chip keeps it legible in dark mode) -->
+      <div class="h-11 px-3 rounded-lg bg-white border border-slate-200/80 flex items-center justify-center shadow-md shrink-0">
+        <img src="data:image/png;base64,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" alt="NPCI International" class="h-8 w-auto block" draggable="false" />
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <h1 class="text-sm font-black tracking-wider uppercase text-white">
-            FastPay+ Terminal Workbench
+          <h1 class="ui-title text-base font-black tracking-wide text-white">
+            The UPI Experience
           </h1>
-          <span class="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono font-bold tracking-widest hidden sm:block">
-            SIMULATOR ACTIVE
-          </span>
         </div>
       </div>
     </div>
 
-    <!-- Active Protocol Flow Switcher Tabs -->
-    <div class="flex items-center gap-2">
-      <div class="bg-slate-900/90 border border-slate-800 p-1 rounded-xl flex items-center gap-1">
-        <button onclick="setBackendTab('pay')" id="fs-tab-pay" class="px-3 sm:px-4 py-1.5 text-xs font-bold rounded-lg transition bg-orange-500 text-white shadow shadow-orange-500/20">
-          1. Pay Flow
-        </button>
-        <button onclick="setBackendTab('pin')" id="fs-tab-pin" class="px-3 sm:px-4 py-1.5 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white">
-          2. Pin Set Flow
-        </button>
-        <button onclick="setBackendTab('balance')" id="fs-tab-balance" class="px-3 sm:px-4 py-1.5 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white">
-          3. Check Balance Flow
-        </button>
+    <!-- Flow selector (dropdown, defaults to Pay Flow) -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <!-- Light / Dark mode toggle (dark is the default; the phone screen never changes) -->
+      <button id="theme-toggle" onclick="toggleTheme()" type="button" title="Switch to light mode" aria-label="Switch to light mode" class="ui-theme-btn flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition">
+        <i data-lucide="sun" class="w-4 h-4"></i><span class="hidden sm:inline">Light mode</span>
+      </button>
+      <label for="flow-select" class="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-500 hidden sm:block">Flow</label>
+      <div class="relative">
+        <select id="flow-select" onchange="setBackendTab(this.value)" class="ui-select appearance-none bg-slate-900/90 border border-slate-700 hover:border-orange-500/60 focus:border-orange-500 focus:outline-none text-white text-base sm:text-xs font-bold rounded-xl pl-3.5 pr-9 py-2 cursor-pointer transition">
+          <option value="pay" selected class="bg-[#0a0f1d]">Pay to VPA Flow</option>
+          <option value="mobile" class="bg-[#0a0f1d]">Pay to Mobile Number Flow</option>
+          <option value="pin" class="bg-[#0a0f1d]">Pin Set Flow</option>
+          <option value="balance" class="bg-[#0a0f1d]">Check Balance Flow</option>
+        </select>
+        <i data-lucide="chevron-down" class="w-4 h-4 text-orange-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
       </div>
     </div>
   </header>
@@ -107,7 +171,39 @@
   <!-- ========================================================================= -->
   <!-- MAIN WORKSPACE: SIDE-BY-SIDE INTEGRATED CONTAINER                         -->
   <!-- ========================================================================= -->
-  <main class="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 p-4 sm:p-6 min-h-0 overflow-y-auto xl:overflow-hidden">
+  <main class="flex-1 flex flex-col gap-4 sm:gap-6 p-4 sm:p-6 min-h-0 overflow-y-auto xl:overflow-hidden">
+
+        <!-- COMMON CONTROL HEADER (spans phone + flow diagram) -->
+        <div class="ui-strip flex flex-wrap items-center justify-between gap-2 bg-slate-900/90 backdrop-blur border border-slate-800 rounded-2xl px-3 py-2.5 z-30 shadow-md shrink-0 w-full">
+          <div class="flex items-center gap-3 min-w-0 flex-1">
+            <span id="fs-step-badge" class="ui-badge px-2.5 py-1 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30 text-xs font-mono font-bold shrink-0">
+              STEP: 0 / 20
+            </span>
+            <div id="fs-step-title" class="ui-title text-sm font-bold text-white leading-snug min-w-0">
+              Ready to execute flow.
+            </div>
+          </div>
+
+          <!-- Controls: Prev, Next, Auto Simulate -->
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="stepSimulation(-1)" id="btn-prev-step" class="ui-btn-nav px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1 transition disabled:opacity-30 disabled:pointer-events-none">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+              <span>Prev</span>
+            </button>
+            <button onclick="stepSimulation(1)" id="btn-next-step" class="ui-btn-nav px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1 transition disabled:opacity-30 disabled:pointer-events-none">
+              <span>Next</span>
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+            <button onclick="toggleAutoSimulation()" id="btn-auto-sim" class="px-4 py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-emerald-600 hover:opacity-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition">
+              <i id="btn-auto-icon" data-lucide="play" class="w-3.5 h-3.5 fill-white"></i>
+              <span id="btn-auto-text">Simulate (0.5s)</span>
+            </button>
+          </div>
+        </div>
+
+    <!-- Two-pane workspace: phone (left) + flow diagram (right) -->
+    <div class="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 min-h-0">
+
     
     <!-- ======================================================================= -->
     <!-- LEFT PANE: HARDWARE TERMINAL MOBILE DISPLAY (NON-TOUCHABLE)             -->
@@ -167,65 +263,27 @@
     </section>
 
     <!-- ======================================================================= -->
-    <!-- RIGHT PANE: SVG ARCHITECTURAL DIAGRAM & PROTOCOL TERMINAL               -->
+    <!-- RIGHT PANE: SVG ARCHITECTURAL DIAGRAM                                   -->
     <!-- ======================================================================= -->
     <section class="xl:col-span-8 flex flex-col min-h-0 gap-4">
       
-      <!-- Top Blueprint Visualizer Card -->
-      <div class="h-[430px] flex flex-col bg-[#0b101d] rounded-3xl border border-slate-800 p-3 sm:p-4 relative overflow-hidden shadow-2xl shrink-0" style="background-image: linear-gradient(to right, #131c33 1px, transparent 1px), linear-gradient(to bottom, #131c33 1px, transparent 1px); background-size: 20px 20px;">
-        
-        <!-- Controller Strip -->
-        <div class="flex items-center justify-between bg-slate-900/90 backdrop-blur border border-slate-800 rounded-2xl p-2.5 mb-2 z-30 shadow-md shrink-0">
-          <div class="flex items-center gap-3">
-            <span id="fs-step-badge" class="px-2.5 py-1 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30 text-xs font-mono font-bold">
-              STEP: 0 / 20
-            </span>
-            <div id="fs-step-title" class="text-xs font-bold text-white max-w-[260px] sm:max-w-md truncate">
-              Ready to execute flow.
-            </div>
-          </div>
+      <!-- Flow Diagram Card (fills the whole right pane) -->
+      <div class="flex-1 min-h-[560px] xl:min-h-0 flex flex-col bg-[#0b101d] rounded-3xl border border-slate-800 p-3 sm:p-5 relative overflow-hidden shadow-2xl ui-card ui-grid-bg">
 
-          <!-- Controls: Prev, Next, Auto Simulate -->
-          <div class="flex items-center gap-2">
-            <button onclick="stepSimulation(-1)" id="btn-prev-step" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1 transition disabled:opacity-30 disabled:pointer-events-none">
-              <i data-lucide="chevron-left" class="w-4 h-4"></i>
-              <span>Prev</span>
-            </button>
-            <button onclick="stepSimulation(1)" id="btn-next-step" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1 transition disabled:opacity-30 disabled:pointer-events-none">
-              <span>Next</span>
-              <i data-lucide="chevron-right" class="w-4 h-4"></i>
-            </button>
-            <button onclick="toggleAutoSimulation()" id="btn-auto-sim" class="px-4 py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-emerald-600 hover:opacity-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition">
-              <i id="btn-auto-icon" data-lucide="play" class="w-3.5 h-3.5 fill-white"></i>
-              <span id="btn-auto-text">Simulate (0.5s)</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- SVG Topology Canvas (viewBox: 1100 x 620) -->
+        <!-- SVG Topology Canvas (viewBox is set per flow in setBackendTab) -->
         <div class="flex-1 relative min-h-0 flex items-center justify-center overflow-hidden">
-          <svg class="w-full h-full max-h-[350px]" viewBox="0 0 1100 620" preserveAspectRatio="xMidYMid meet">
+          <svg id="flow-svg" class="w-full h-full" viewBox="0 30 1040 580" preserveAspectRatio="xMidYMid meet">
             <defs>
               <marker id="arrow-neutral" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
-                <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#334155" />
+                <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#475569" />
               </marker>
               <marker id="arrow-active" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
                 <path d="M 0 1 L 10 5 L 0 9 z" fill="#f97316" />
               </marker>
-
-              <!-- Radial Glow Filters -->
-              <filter id="glow-orange" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#f97316" flood-opacity="0.6"/>
-              </filter>
-              <filter id="glow-emerald" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#10b981" flood-opacity="0.6"/>
-              </filter>
-              <filter id="glow-sky" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#0284c7" flood-opacity="0.6"/>
-              </filter>
-              <filter id="glow-purple" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#8b5cf6" flood-opacity="0.6"/>
-              </filter>
+              <filter id="glow-orange" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#f97316" flood-opacity="0.6"/></filter>
+              <filter id="glow-emerald" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#10b981" flood-opacity="0.6"/></filter>
+              <filter id="glow-sky" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#0284c7" flood-opacity="0.6"/></filter>
+              <filter id="glow-purple" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#8b5cf6" flood-opacity="0.6"/></filter>
             </defs>
 
             <!-- Dynamic SVG Wires Group -->
@@ -233,115 +291,62 @@
 
             <!-- ================= ENTITY BLOCKS ================= -->
             <g id="block-central-switch" class="transition-all duration-300">
-              <rect x="470" y="275" width="160" height="70" rx="20" fill="#1e1b4b" stroke="#f97316" stroke-width="4" filter="url(#glow-orange)" />
-              <text x="550" y="316" fill="#ffffff" font-size="14" font-family="sans-serif" font-weight="900" text-anchor="middle" letter-spacing="1">Central Switch</text>
+              <rect x="575" y="275" width="170" height="90" rx="22" fill="#1e1b4b" stroke="#f97316" stroke-width="4" data-stroke="#f97316" data-sw="4" filter="url(#glow-orange)" />
+              <text x="660" y="326" fill="#ffffff" font-size="17" font-family="sans-serif" font-weight="900" text-anchor="middle" letter-spacing="0.5">Central Switch</text>
             </g>
-
             <g id="block-payer-psp" class="transition-all duration-300">
-              <rect x="220" y="275" width="140" height="70" rx="18" fill="#431407" stroke="#fb923c" stroke-width="3.5" filter="url(#glow-orange)" />
-              <text x="290" y="316" fill="#fed7aa" font-size="13" font-family="sans-serif" font-weight="900" text-anchor="middle">Payer PSP</text>
+              <rect x="305" y="280" width="140" height="80" rx="18" fill="#431407" stroke="#fb923c" stroke-width="3.5" data-stroke="#fb923c" data-sw="3.5" filter="url(#glow-orange)" />
+              <text x="375" y="326" fill="#fed7aa" font-size="16" font-family="sans-serif" font-weight="900" text-anchor="middle">Payer PSP</text>
             </g>
-
             <g id="block-payee-psp" class="transition-all duration-300">
-              <rect x="740" y="275" width="140" height="70" rx="18" fill="#082f49" stroke="#38bdf8" stroke-width="3.5" filter="url(#glow-sky)" />
-              <text x="810" y="316" fill="#bae6fd" font-size="13" font-family="sans-serif" font-weight="900" text-anchor="middle">Payee PSP</text>
+              <rect x="865" y="280" width="140" height="80" rx="18" fill="#082f49" stroke="#38bdf8" stroke-width="3.5" data-stroke="#38bdf8" data-sw="3.5" filter="url(#glow-sky)" />
+              <text x="935" y="326" fill="#bae6fd" font-size="16" font-family="sans-serif" font-weight="900" text-anchor="middle">Payee PSP</text>
             </g>
-
             <g id="block-payer-bank" class="transition-all duration-300">
-              <rect x="475" y="75" width="150" height="70" rx="18" fill="#064e3b" stroke="#34d399" stroke-width="3.5" filter="url(#glow-emerald)" />
-              <text x="550" y="116" fill="#a7f3d0" font-size="13" font-family="sans-serif" font-weight="900" text-anchor="middle">Payer's Bank</text>
+              <rect x="585" y="60" width="150" height="80" rx="18" fill="#064e3b" stroke="#34d399" stroke-width="3.5" data-stroke="#34d399" data-sw="3.5" filter="url(#glow-emerald)" />
+              <text x="660" y="106" fill="#a7f3d0" font-size="16" font-family="sans-serif" font-weight="900" text-anchor="middle">Payer's Bank</text>
             </g>
-
             <g id="block-payee-bank" class="transition-all duration-300">
-              <rect x="475" y="475" width="150" height="70" rx="18" fill="#3b0764" stroke="#c084fc" stroke-width="3.5" filter="url(#glow-purple)" />
-              <text x="550" y="516" fill="#e9d5ff" font-size="13" font-family="sans-serif" font-weight="900" text-anchor="middle">Payee's Bank</text>
+              <rect x="585" y="500" width="150" height="80" rx="18" fill="#3b0764" stroke="#c084fc" stroke-width="3.5" data-stroke="#c084fc" data-sw="3.5" filter="url(#glow-purple)" />
+              <text x="660" y="546" fill="#e9d5ff" font-size="16" font-family="sans-serif" font-weight="900" text-anchor="middle">Payee's Bank</text>
             </g>
-
-            <!-- Peripheral Helper Blocks -->
             <g id="block-cl" class="transition-all duration-300">
-              <rect x="20" y="80" width="140" height="60" rx="14" fill="#0c2264" stroke="#6366f1" stroke-width="2" />
-              <text x="90" y="115" fill="#e0e7ff" font-size="12" font-family="sans-serif" font-weight="bold" text-anchor="middle">Common Library</text>
+              <rect x="35" y="65" width="140" height="70" rx="14" fill="#0c2264" stroke="#6366f1" stroke-width="2.5" data-stroke="#6366f1" data-sw="2.5" />
+              <text x="105" y="105" fill="#e0e7ff" font-size="14" font-family="sans-serif" font-weight="900" text-anchor="middle">Common Library</text>
             </g>
-
             <g id="block-payer-app" class="transition-all duration-300">
-              <rect x="25" y="280" width="130" height="60" rx="14" fill="#ffffff" stroke="#f97316" stroke-width="2.5" />
-              <text x="90" y="315" fill="#0f172a" font-size="12" font-family="sans-serif" font-weight="900" text-anchor="middle">Payer APP</text>
+              <rect x="35" y="285" width="140" height="70" rx="14" fill="#ffffff" stroke="#f97316" stroke-width="3" data-stroke="#f97316" data-sw="3" />
+              <text x="105" y="325" fill="#0f172a" font-size="16" font-family="sans-serif" font-weight="900" text-anchor="middle">Payer APP</text>
             </g>
-
             <g id="block-payer-hsm" class="transition-all duration-300">
-              <rect x="215" y="80" width="150" height="60" rx="14" fill="#0f172a" stroke="#14b8a6" stroke-width="2" />
-              <text x="290" y="115" fill="#5eead4" font-size="12" font-family="sans-serif" font-weight="bold" text-anchor="middle">Payer Bank's HSM</text>
+              <rect x="300" y="65" width="150" height="70" rx="14" fill="#0f172a" stroke="#14b8a6" stroke-width="2.5" data-stroke="#14b8a6" data-sw="2.5" />
+              <text x="375" y="105" fill="#5eead4" font-size="14" font-family="sans-serif" font-weight="900" text-anchor="middle">Payer Bank's HSM</text>
             </g>
-
             <g id="block-payer-cbs" class="transition-all duration-300">
-              <rect x="735" y="80" width="150" height="60" rx="14" fill="#022c22" stroke="#10b981" stroke-width="2" />
-              <text x="810" y="115" fill="#6ee7b7" font-size="12" font-family="sans-serif" font-weight="bold" text-anchor="middle">Payer Bank's CBS</text>
+              <rect x="860" y="65" width="150" height="70" rx="14" fill="#022c22" stroke="#10b981" stroke-width="2.5" data-stroke="#10b981" data-sw="2.5" />
+              <text x="935" y="105" fill="#6ee7b7" font-size="14" font-family="sans-serif" font-weight="900" text-anchor="middle">Payer Bank's CBS</text>
             </g>
-
             <g id="block-payee-cbs" class="transition-all duration-300">
-              <rect x="735" y="480" width="150" height="60" rx="14" fill="#2e1065" stroke="#a855f7" stroke-width="2" />
-              <text x="810" y="515" fill="#d8b4fe" font-size="12" font-family="sans-serif" font-weight="bold" text-anchor="middle">Payee Bank's CBS</text>
+              <rect x="860" y="505" width="150" height="70" rx="14" fill="#2e1065" stroke="#a855f7" stroke-width="2.5" data-stroke="#a855f7" data-sw="2.5" />
+              <text x="935" y="545" fill="#d8b4fe" font-size="14" font-family="sans-serif" font-weight="900" text-anchor="middle">Payee Bank's CBS</text>
             </g>
           </svg>
         </div>
 
       </div>
 
-      <!-- Bottom Protocol Terminal Card -->
-      <div class="flex-1 bg-[#0b101d] rounded-3xl border border-slate-800 p-4 flex flex-col min-h-[220px] shadow-2xl overflow-hidden">
-        
-        <div class="flex items-center justify-between pb-2 border-b border-slate-800 mb-2">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-            <span class="text-xs font-black tracking-wider uppercase text-cyan-200 font-mono">
-              Step Protocol Terminal
-            </span>
-            <span id="fs-step-indicator" class="text-orange-400 font-mono font-bold text-xs ml-2">STEP 0 / 20</span>
-          </div>
-          <span id="fs-api-badge" class="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono text-[10px]">AWAITING_STEP</span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 flex-1 min-h-0">
-          
-          <!-- Narrative: "Learn what happens" -->
-          <div class="md:col-span-5 flex flex-col justify-between bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 overflow-y-auto">
-            <div>
-              <div class="text-[10px] text-orange-400 uppercase font-bold tracking-wider font-mono mb-1">
-                Learn what happens
-              </div>
-              <div id="fs-step-desc" class="text-xs text-slate-300 leading-relaxed font-sans">
-                Select a flow and use <b>Next</b> or <b>Simulate</b> to execute clearing hops.
-              </div>
-            </div>
-            <div class="mt-2 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-              <span>Security: TLS 1.3 + HSM PKCS#11</span>
-              <span class="text-emerald-400 font-semibold">Zero-Knowledge PIN</span>
-            </div>
-          </div>
-
-          <!-- XML Wire Packet & Method Inspector -->
-          <div class="md:col-span-7 flex flex-col bg-slate-950 border border-slate-800 rounded-2xl p-3 overflow-hidden">
-            <div class="flex items-center justify-between mb-1 text-[10px] font-mono text-slate-400 font-bold uppercase">
-              <span id="fs-method-title" class="text-emerald-400 font-bold">API / Method Payload</span>
-              <span class="text-[9px] px-1.5 py-0.2 bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 rounded">ISO 20022 / XML</span>
-            </div>
-            <div id="fs-api-container" class="flex-1 overflow-auto font-mono text-[10px] text-emerald-300/90 leading-tight">
-              <div class="text-slate-600 italic text-center py-8">Awaiting transaction hop execution...</div>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
     </section>
 
+    </div>
   </main>
 
   <!-- ========================================================================= -->
   <!-- JAVASCRIPT STATE ENGINE & DUAL-PANE SYNC LOGIC                            -->
   <!-- ========================================================================= -->
   <script>
+    // Safe fallbacks if a CDN script is blocked, so the page still renders
+    if (typeof lucide === 'undefined') window.lucide = { createIcons() {} };
+
     // System Time Sync
     const setTime = () => {
       const now = new Date();
@@ -393,38 +398,15 @@
     // =========================================================================
     
     // PAY FLOW (21 STEPS)
-    const PAY_FLOW_STEPS = [
-      {
-        stepNum: 1,
-        title: "User on FastPay+ Home Screen",
-        desc: "Payer opens the FastPay+ application and taps on <b>Pay VPA</b> to initiate a transfer.",
-        activeBlocks: ['block-payer-app'],
-        activeWires: [],
-        phoneState: 'home-screen',
-        apiInfo: { methodName: "UI Client Event (App Launch)", category: "Mobile Client", details: "Terminal renders the application home screen.", xml: null }
-      },
-      {
-        stepNum: 2,
-        title: "Payer Scans QR / Selects Merchant & Account",
-        desc: "Payer configures transfer to <code>merchantABC@bankB</code> (₹750.00). Terminal loads debit account <b>Bank A (•••• 4821)</b>.",
-        activeBlocks: ['block-payer-app'],
-        activeWires: [],
-        phoneState: 'pay-init',
-        apiInfo: { methodName: "UI Client Event (Pre-Auth Intent)", category: "Mobile Client", details: "Payer verifies invoice parameters before delegating to Common Library.", xml: null }
-      },
+    // Backend part of the pay flow (shared by Pay to VPA and Pay to Mobile Number)
+    const PAY_CORE_STEPS = [
       {
         stepNum: 3,
         title: "Payer APP -> Common Library [Launch SafePad]",
         desc: "<b>Arrow #1 [Req]:</b> Payer APP redirects to isolated Common Library container to capture UPI PIN securely.",
         activeBlocks: ['block-payer-app', 'block-cl'],
         activeWires: ['wire-cl-req'],
-        phoneState: 'cl-pin-entry',
-        apiInfo: {
-          methodName: "getCredential()",
-          category: "Common Library (CL)",
-          details: "Payer APP calls Common Library method getCredential() with bank challenge token.",
-          xml: `<cl:getCredentialRequest>\n  <Head ver="2.0" ts="2026-10-10T22:26:01Z"/>\n  <Txn id="TXN-98432101" note="Dinner"/>\n  <CredsAllowed type="PIN" subType="MPIN" dType="NUM" dLength="6"/>\n  <Payee name="Merchant ABC" addr="merchantABC@bankB"/>\n</cl:getCredentialRequest>`
-        }
+        phoneState: 'cl-pin-entry'
       },
       {
         stepNum: 4,
@@ -432,13 +414,7 @@
         desc: "<b>Arrow #2 [Resp]:</b> Common Library encrypts PIN block using Bank A Public Key. Cleartext PIN is wiped from RAM.",
         activeBlocks: ['block-cl', 'block-payer-app'],
         activeWires: ['wire-cl-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "getCredential() [Response]",
-          category: "Common Library (CL)",
-          details: "Outputs Base64-encoded encrypted PIN block (RSA/PKCS1).",
-          xml: `<cl:getCredentialResponse>\n  <Head ver="2.0" ts="2026-10-10T22:26:03Z"/>\n  <CredBlock type="PIN" subType="MPIN">\n    <Data>RSA_PKCS1_ENC_7F9940A3912DF801ACD98204</Data>\n    <Ki>20260901-BKNA-KEY-01</Ki>\n  </CredBlock>\n  <Status>SUCCESS</Status>\n</cl:getCredentialResponse>`
-        }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 5,
@@ -446,13 +422,7 @@
         desc: "<b>Arrow #3 [Req]:</b> Payer APP dispatches payment authorization payload to Payer PSP.",
         activeBlocks: ['block-payer-app', 'block-payer-psp'],
         activeWires: ['wire-psp-req'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "ReqPay Type=PAY",
-          category: "UPI Protocol",
-          details: "Initiates pacs.008 debit payload with encrypted credential token.",
-          xml: `<upi:ReqPay xmlns:upi="http://npci.org/upi/schema/">\n  <Head ver="2.0" ts="2026-10-10T22:26:04Z" msgId="MSG-PAY-001"/>\n  <Txn id="TXN-98432101" note="Dinner" type="PAY"/>\n  <Payer addr="userABC@bankA">\n    <Amount value="750.00" curr="INR"/>\n    <CredBlock subType="MPIN">RSA_PKCS1_ENC_7F9940A3912D...</CredBlock>\n  </Payer>\n  <Payee addr="merchantABC@bankB"/>\n</upi:ReqPay>`
-        }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 6,
@@ -460,55 +430,31 @@
         desc: "<b>Arrow #4 [Req]:</b> Payer PSP redirects request to Central Switch with Payer VPA, Payee VPA, and BIC.",
         activeBlocks: ['block-payer-psp', 'block-central-switch'],
         activeWires: ['wire-switch-req'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "ReqPay Type=PAY",
-          category: "UPI Protocol",
-          details: "Central Switch receives interbank clearing order.",
-          xml: `<upi:ReqPay xmlns:upi="http://npci.org/upi/schema/">\n  <Head ver="2.0" ts="2026-10-10T22:26:04Z" orgId="FASTPAY_PSP"/>\n  <Txn id="TXN-98432101" rrn="423189201948" type="PAY"/>\n  <Payer addr="userABC@bankA" accNo="4821" ifsc="BKNA000101"/>\n  <Payee addr="merchantABC@bankB"/>\n</upi:ReqPay>`
-        }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 7,
         title: "Central Switch -> Payee PSP [Resolve Payee Handle]",
         desc: "<b>Arrow #5 [Req]:</b> Central Switch queries Payee PSP based on handle domain (<code>@bankB</code>).",
         activeBlocks: ['block-central-switch', 'block-payee-psp'],
-        activeWires: ['wire-pay-5'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "ReqAuthDetails Type=PAY",
-          category: "UPI Protocol",
-          details: "Switch validates beneficiary handle and queries payee account mapping.",
-          xml: `<upi:ReqAuthDetails xmlns:upi="http://npci.org/upi/schema/">\n  <Head ver="2.0" ts="2026-10-10T22:26:05Z" msgId="SW-VAL-90184"/>\n  <Payee addr="merchantABC@bankB"/>\n</upi:ReqAuthDetails>`
-        }
+        activeWires: ['wire-payee-psp-req'],
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 8,
         title: "Payee PSP -> Central Switch [Validate VPA & Resolve BIC]",
         desc: "<b>Arrow #6 [Resp]:</b> Payee PSP resolves beneficiary account number (<code>•••• 9012</code>) and BIC (<code>BKNB000202</code>).",
         activeBlocks: ['block-payee-psp', 'block-central-switch'],
-        activeWires: ['wire-pay-6'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "RespAuthDetails Type=PAY",
-          category: "UPI Protocol",
-          details: "Payee address verified authentic.",
-          xml: `<upi:RespAuthDetails xmlns:upi="http://npci.org/upi/schema/">\n  <Head ver="2.0" ts="2026-10-10T22:26:05Z"/>\n  <Payee addr="merchantABC@bankB" name="Merchant ABC">\n    <Account accNo="9012" ifsc="BKNB000202"/>\n  </Payee>\n</upi:RespAuthDetails>`
-        }
+        activeWires: ['wire-payee-psp-resp'],
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 9,
         title: "Central Switch -> Payer's Bank [Route Debit Request]",
         desc: "<b>Arrow #7 [Req]:</b> Central Switch routes Debit request to Payer's Bank based on BIC (<code>BKNA000101</code>).",
         activeBlocks: ['block-central-switch', 'block-payer-bank'],
-        activeWires: ['wire-pay-7'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "ReqPay Type=DEBIT",
-          category: "UPI Protocol",
-          details: "ISO 20022 pacs.008 debit leg initiated.",
-          xml: `<pacs:pacs.008.001.08 xmlns:pacs="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08">\n  <GrpHdr><MsgId>SW-DEBIT-7741</MsgId></GrpHdr>\n  <CdtTrfTxInf>\n    <IntrBkSttlmAmt Ccy="INR">750.00</IntrBkSttlmAmt>\n    <DbtrAcct><Id><Othr><Id>4821</Id></Othr></Id></DbtrAcct>\n    <SplmtryData><Envlp><CredBlock>RSA_PKCS1_ENC_...</CredBlock></Envlp></SplmtryData>\n  </CdtTrfTxInf>\n</pacs:pacs.008.001.08>`
-        }
+        activeWires: ['wire-bank-req'],
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 10,
@@ -516,13 +462,7 @@
         desc: "<b>Arrow #8 [Req]:</b> Payer's Bank forwards encrypted PIN block to its Hardware Security Module (HSM).",
         activeBlocks: ['block-payer-bank', 'block-payer-hsm'],
         activeWires: ['wire-hsm-req'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "Bank's internal APIs (out of UPI purview)",
-          category: "Internal Bank HSM",
-          details: "Hardware vault decrypts and compares customer PIN hash.",
-          xml: `<hsm:verifyPinCommand>\n  <SlotId>HSM_SLOT_01</SlotId>\n  <EncryptedPinBlock>RSA_PKCS1_ENC_...</EncryptedPinBlock>\n</hsm:verifyPinCommand>`
-        }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 11,
@@ -530,13 +470,7 @@
         desc: "<b>Arrow #9 [Resp]:</b> HSM confirms PIN matches stored key. Authorization signature returned.",
         activeBlocks: ['block-payer-hsm', 'block-payer-bank'],
         activeWires: ['wire-hsm-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "Bank's internal APIs (out of UPI purview)",
-          category: "Internal Bank HSM",
-          details: "PIN authentication successful.",
-          xml: `<hsm:verifyPinResponse>\n  <ResultCode>AUTH_SUCCESS_00</ResultCode>\n  <LatencyMs>11</LatencyMs>\n</hsm:verifyPinResponse>`
-        }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 12,
@@ -544,13 +478,7 @@
         desc: "<b>Arrow #10 [Req]:</b> Payer's Bank instructs Core Banking System (CBS) to debit ledger for ₹750.00.",
         activeBlocks: ['block-payer-bank', 'block-payer-cbs'],
         activeWires: ['wire-cbs-req'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "Bank's internal APIs (out of UPI purview)",
-          category: "Internal Bank CBS",
-          details: "Core banking debit execution.",
-          xml: `<cbs:debitAccountRequest>\n  <AccountNo>••••4821</AccountNo>\n  <DebitAmount currency="INR">750.00</DebitAmount>\n</cbs:debitAccountRequest>`
-        }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 13,
@@ -558,13 +486,7 @@
         desc: "<b>Arrow #11 [Resp]:</b> CBS posts debit entry, decrements available balance, and issues journal reference.",
         activeBlocks: ['block-payer-cbs', 'block-payer-bank'],
         activeWires: ['wire-cbs-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "Bank's internal APIs (out of UPI purview)",
-          category: "Internal Bank CBS",
-          details: "Ledger debit settled.",
-          xml: `<cbs:debitAccountResponse>\n  <StatusCode>POSTED_SETTLED</StatusCode>\n  <LedgerBalance currency="INR">144250.00</LedgerBalance>\n</cbs:debitAccountResponse>`
-        }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 14,
@@ -572,83 +494,47 @@
         desc: "<b>Arrow #12 [Resp]:</b> Payer's Bank transmits debit confirmation to Central Switch.",
         activeBlocks: ['block-payer-bank', 'block-central-switch'],
         activeWires: ['wire-bank-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "RespPay Type=DEBIT",
-          category: "UPI Protocol",
-          details: "Debit settlement confirmation.",
-          xml: `<pacs:pacs.002.001.10>\n  <TxInfAndSts><TxSts>ACTC</TxSts><ClrSysRef>CLR-BKNA-DEBIT-00</ClrSysRef></TxInfAndSts>\n</pacs:pacs.002.001.10>`
-        }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 15,
         title: "Central Switch -> Payee's Bank [Route Credit Request]",
         desc: "<b>Arrow #13 [Req]:</b> Switch forwards credit instruction to Beneficiary Bank (<code>BKNB000202</code>).",
         activeBlocks: ['block-central-switch', 'block-payee-bank'],
-        activeWires: ['wire-pay-13'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "ReqPay Type=CREDIT",
-          category: "UPI Protocol",
-          details: "Beneficiary credit dispatch.",
-          xml: `<pacs:pacs.008.001.08>\n  <IntrBkSttlmAmt Ccy="INR">750.00</IntrBkSttlmAmt>\n  <CdtrAcct><Id><Othr><Id>9012</Id></Othr></Id></CdtrAcct>\n</pacs:pacs.008.001.08>`
-        }
+        activeWires: ['wire-payee-bank-req'],
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 16,
         title: "Payee's Bank -> Payee Bank's CBS [Post Credit Request]",
         desc: "<b>Arrow #14 [Req]:</b> Payee's Bank triggers CBS to post credit to merchant account ledger.",
         activeBlocks: ['block-payee-bank', 'block-payee-cbs'],
-        activeWires: ['wire-pay-14'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "Bank's internal APIs (out of UPI purview)",
-          category: "Internal Bank CBS",
-          details: "Beneficiary core banking ledger posting.",
-          xml: `<cbs:creditAccountRequest>\n  <AccountNo>••••9012</AccountNo>\n  <CreditAmount currency="INR">750.00</CreditAmount>\n</cbs:creditAccountRequest>`
-        }
+        activeWires: ['wire-payee-cbs-req'],
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 17,
         title: "Payee Bank's CBS -> Payee's Bank [Credit Success Response]",
         desc: "<b>Arrow #15 [Resp]:</b> Payee Bank CBS confirms funds credited to merchant account.",
         activeBlocks: ['block-payee-cbs', 'block-payee-bank'],
-        activeWires: ['wire-pay-15'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "Bank's internal APIs (out of UPI purview)",
-          category: "Internal Bank CBS",
-          details: "Beneficiary credit confirmed.",
-          xml: `<cbs:creditAccountResponse>\n  <Status>CREDITED_FINAL</Status>\n</cbs:creditAccountResponse>`
-        }
+        activeWires: ['wire-payee-cbs-resp'],
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 18,
         title: "Payee's Bank -> Central Switch [Credit Response]",
         desc: "<b>Arrow #16 [Resp]:</b> Payee's Bank transmits credit acknowledgment to Central Switch.",
         activeBlocks: ['block-payee-bank', 'block-central-switch'],
-        activeWires: ['wire-pay-16'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "RespPay Type=CREDIT",
-          category: "UPI Protocol",
-          details: "Instant credit leg confirmed.",
-          xml: `<pacs:pacs.002.001.10>\n  <TxInfAndSts><TxSts>ACTC</TxSts></TxInfAndSts>\n</pacs:pacs.002.001.10>`
-        }
+        activeWires: ['wire-payee-bank-resp'],
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 19,
         title: "Central Switch -> Payer PSP [Pay Response]",
         desc: "<b>Arrow #17 [Resp]:</b> Central Switch delivers final clearing confirmation to Payer PSP.",
         activeBlocks: ['block-central-switch', 'block-payer-psp'],
-        activeWires: ['wire-pay-17'],
-        phoneState: 'pending-clearing',
-        apiInfo: {
-          methodName: "RespPay Type=PAY",
-          category: "UPI Protocol",
-          details: "Clearing cycle complete with finality.",
-          xml: `<upi:RespPay>\n  <Txn id="TXN-98432101" rrn="423189201948" status="SUCCESS"/>\n</upi:RespPay>`
-        }
+        activeWires: ['wire-switch-resp'],
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 20,
@@ -656,31 +542,102 @@
         desc: "<b>Arrow #18 [Resp]:</b> Payer PSP forwards the success status to Payer APP to render the payment receipt.",
         activeBlocks: ['block-payer-psp', 'block-payer-app'],
         activeWires: ['wire-psp-resp'],
-        phoneState: 'success-txn',
-        apiInfo: {
-          methodName: "RespPay Type=PAY",
-          category: "UPI Protocol",
-          details: "Customer mobile client displays irrevocable payment success receipt.",
-          xml: `<upi:RespPayClient>\n  <Txn status="SUCCESS" rrn="423189201948"/>\n</upi:RespPayClient>`
-        }
+        phoneState: 'success-txn'
       },
       {
         stepNum: 21,
         title: "Central Switch -> Payee PSP [Transaction Confirmation]",
         desc: "<b>Arrow #19 [Req]:</b> Central Switch dispatches asynchronous notification callback to Payee PSP.",
         activeBlocks: ['block-central-switch', 'block-payee-psp'],
-        activeWires: ['wire-pay-19'],
-        phoneState: 'success-txn',
-        apiInfo: {
-          methodName: "ReqTxnConfirmation",
-          category: "UPI Protocol",
-          details: "Merchant notification callback.",
-          xml: `<upi:ReqTxnConfirmation>\n  <Txn id="TXN-98432101" rrn="423189201948" type="PAY"/>\n  <Status>SETTLED</Status>\n</upi:ReqTxnConfirmation>`
-        }
+        activeWires: ['wire-payee-psp-notify'],
+        phoneState: 'success-txn'
       }
     ];
 
-    // SEQUENTIAL PIN SET FLOW (21 STEPS)
+    // Payee profiles for the two pay flows
+    const PAYEE = {
+      pay: {
+        homeLabel: 'Pay VPA', screenTitle: 'Pay to VPA', fieldLabel: 'Payee VPA',
+        placeholder: 'name@bank', hint: 'Enter the payee\'s UPI ID, e.g. name@bank',
+        prefix: '', input: 'merchantABC@bankB', typeMs: 75,
+        verifyingText: 'Verifying VPA...', icon: 'store',
+        name: 'Merchant ABC', vpa: null, mobileShown: null, amount: '750'
+      },
+      mobile: {
+        homeLabel: 'Pay Mobile', screenTitle: 'Pay to Mobile Number', fieldLabel: 'Payee Mobile Number',
+        placeholder: '10-digit mobile number', hint: 'Enter the mobile number linked to the payee\'s UPI account',
+        prefix: '+91', input: '9876543210', typeMs: 110,
+        verifyingText: 'Verifying mobile number...', icon: 'user-round',
+        name: 'Rahul Sharma', vpa: 'rahul.sharma@bankB', mobileShown: '+91 9876543210', amount: '750'
+      }
+    };
+    const DEBIT_ACCOUNTS = [
+      { letter: 'A', bank: 'Bank A', sub: 'Savings •••• 4821' },
+      { letter: 'C', bank: 'Bank C', sub: 'Current •••• 7733' }
+    ];
+
+    // Builds the full step list for a pay flow: payer UI steps (enter -> verify -> amount -> account -> proceed)
+    // followed by the shared backend steps.
+    function buildPayFlowSteps(kind) {
+      const P = PAYEE[kind];
+      const isMobile = kind === 'mobile';
+      const payeeResult = isMobile
+        ? `payee name <b>${P.name}</b> and payee VPA <code>${P.vpa}</code> are returned`
+        : `payee name <b>${P.name}</b> is returned`;
+
+      const ui = [
+        {
+          title: 'User on FastPay+ Home Screen',
+          desc: `Payer opens the FastPay+ application and taps on <b>${P.homeLabel}</b> to initiate a transfer.`,
+          activeBlocks: ['block-payer-app'], activeWires: [], phoneState: 'home-screen'
+        },
+        {
+          title: `Payer Enters ${P.fieldLabel} & Taps Verify`,
+          desc: `Payer types <code>${P.input}</code> in the ${P.fieldLabel} field and taps <b>Verify</b>.`,
+          activeBlocks: ['block-payer-app'], activeWires: [], phoneState: 'pay-entry'
+        },
+        {
+          title: isMobile ? 'Verifying Mobile Number [Processing]' : 'Verifying VPA [Processing]',
+          desc: isMobile
+            ? 'A processing animation is shown while the mobile number is resolved to the payee\'s UPI account.'
+            : 'A processing animation is shown while the payee VPA is validated.',
+          activeBlocks: ['block-payer-app'], activeWires: [], phoneState: 'pay-verifying'
+        },
+        {
+          title: 'Payee Verified: Payer Enters Amount',
+          desc: `Verification succeeds and the ${payeeResult}. Payer enters the amount <b>₹750.00</b>.`,
+          activeBlocks: ['block-payer-app'], activeWires: [], phoneState: 'pay-amount'
+        },
+        {
+          title: 'Payer Selects Debit Account',
+          desc: 'Payer selects <b>Bank A (•••• 4821)</b> as the account to debit.',
+          activeBlocks: ['block-payer-app'], activeWires: [], phoneState: 'pay-account'
+        },
+        {
+          title: 'Payer Taps Proceed to Pay',
+          desc: 'Payer reviews the details and taps <b>Proceed to Pay</b> to start the transaction.',
+          activeBlocks: ['block-payer-app'], activeWires: [], phoneState: 'pay-proceed'
+        }
+      ];
+
+      const core = PAY_CORE_STEPS.map(st => {
+        const c = Object.assign({}, st);
+        if (isMobile) {
+          c.title = c.title.replace('merchant', 'payee');
+          c.desc = c.desc
+            .replace('with Payer VPA, Payee VPA, and BIC.', `with Payer VPA, Payee VPA (<code>${P.vpa}</code>, resolved from the mobile number), and BIC.`)
+            .replace('merchant account', 'payee account');
+        }
+        return c;
+      });
+
+      return ui.concat(core).map((st, i) => Object.assign({}, st, { stepNum: i + 1 }));
+    }
+
+    const PAY_FLOW_STEPS = buildPayFlowSteps('pay');
+    const MOBILE_FLOW_STEPS = buildPayFlowSteps('mobile');
+
+    // SEQUENTIAL PIN SET FLOW (22 STEPS, no CBS)
     const PIN_SET_FLOW_STEPS = [
       {
         stepNum: 1,
@@ -688,8 +645,7 @@
         desc: "Payer opens the FastPay+ application and taps on <b>Reset PIN</b> to configure their UPI PIN.",
         activeBlocks: ['block-payer-app'],
         activeWires: [],
-        phoneState: 'home-screen',
-        apiInfo: { methodName: "UI Client Event (App Launch)", category: "Mobile Client", details: "Terminal renders the application home screen.", xml: null }
+        phoneState: 'home-screen'
       },
       {
         stepNum: 2,
@@ -697,8 +653,7 @@
         desc: "Payer selects <b>Bank A (•••• 4821)</b> to set or reset their UPI PIN. Payer APP initiates registration intent.",
         activeBlocks: ['block-payer-app'],
         activeWires: [],
-        phoneState: 'pin-select-acct',
-        apiInfo: { methodName: "UI Client Event (Account Selected)", category: "Mobile Client", details: "Payer initiates UPI PIN setup workflow.", xml: null }
+        phoneState: 'pin-select-acct'
       },
       {
         stepNum: 3,
@@ -706,8 +661,7 @@
         desc: "<b>Arrow #1 [Req]:</b> Payer APP requests Payer PSP to trigger an OTP challenge for verification before invoking CL.",
         activeBlocks: ['block-payer-app', 'block-payer-psp'],
         activeWires: ['wire-psp-req'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "ReqOtp [Initiation]", category: "Mobile to PSP", details: "Payer APP requests bank OTP prior to launching Common Library.", xml: null }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 4,
@@ -715,8 +669,7 @@
         desc: "<b>Arrow #2 [Req]:</b> Payer PSP forwards <code>ReqOtp</code> to Central Switch with MSISDN and BIC (<code>BKNA000101</code>).",
         activeBlocks: ['block-payer-psp', 'block-central-switch'],
         activeWires: ['wire-switch-req'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "ReqOtp", category: "UPI Protocol", details: "Switch receives OTP request.", xml: `<upi:ReqOtp>\n  <Payer phone="+9198200XXXXX" ifsc="BKNA000101"/>\n</upi:ReqOtp>` }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 5,
@@ -724,8 +677,7 @@
         desc: "<b>Arrow #3 [Req]:</b> Central Switch forwards <code>ReqOtp</code> to user's issuing bank.",
         activeBlocks: ['block-central-switch', 'block-payer-bank'],
         activeWires: ['wire-bank-req'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "ReqOtp", category: "UPI Protocol", details: "Directs OTP generation to issuing bank.", xml: null }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 6,
@@ -733,8 +685,7 @@
         desc: "<b>Arrow #4 [Resp]:</b> Payer's Bank triggers telecom SMS gateway and confirms OTP dispatch via <code>RespOtp</code>.",
         activeBlocks: ['block-payer-bank', 'block-central-switch'],
         activeWires: ['wire-bank-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "RespOtp", category: "UPI Protocol", details: "OTP dispatch acknowledged by issuing bank.", xml: `<upi:RespOtp>\n  <Status>SUCCESS_OTP_SENT</Status>\n</upi:RespOtp>` }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 7,
@@ -742,8 +693,7 @@
         desc: "<b>Arrow #5 [Resp]:</b> Central Switch delivers <code>RespOtp</code> confirmation to Payer PSP.",
         activeBlocks: ['block-central-switch', 'block-payer-psp'],
         activeWires: ['wire-switch-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "RespOtp", category: "UPI Protocol", details: "Forwarding OTP confirmation to PSP.", xml: null }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 8,
@@ -751,8 +701,7 @@
         desc: "<b>Arrow #6 [Resp]:</b> Payer PSP notifies Payer APP that OTP has been successfully issued. Payer APP now invokes Common Library (CL).",
         activeBlocks: ['block-payer-psp', 'block-payer-app'],
         activeWires: ['wire-psp-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "RespOtp [Client Delivery]", category: "PSP to Mobile", details: "OTP delivery confirmed. Client invokes CL.", xml: null }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 9,
@@ -760,8 +709,7 @@
         desc: "<b>Arrow #7 [Req]:</b> With OTP dispatched, Common Library (CL) is launched. User enters the last 6 digits of their Debit Card.",
         activeBlocks: ['block-payer-app', 'block-cl'],
         activeWires: ['wire-cl-req'],
-        phoneState: 'cl-step-1',
-        apiInfo: { methodName: "getCredential()", category: "Common Library (CL)", details: "CL captures last 6 digits of Debit Card in isolated sandbox.", xml: null }
+        phoneState: 'cl-step-1'
       },
       {
         stepNum: 10,
@@ -769,8 +717,7 @@
         desc: "User enters Debit Card Expiry date (MM/YY) in the Common Library SafePad interface.",
         activeBlocks: ['block-payer-app', 'block-cl'],
         activeWires: ['wire-cl-req'],
-        phoneState: 'cl-step-2',
-        apiInfo: { methodName: "getCredential()", category: "Common Library (CL)", details: "CL captures card expiry MM/YY.", xml: null }
+        phoneState: 'cl-step-2'
       },
       {
         stepNum: 11,
@@ -778,8 +725,7 @@
         desc: "User arrives on the OTP screen. The Bank SMS push notification arrives and is auto-read by the Common Library.",
         activeBlocks: ['block-payer-app', 'block-cl'],
         activeWires: ['wire-cl-req'],
-        phoneState: 'cl-step-3-receive',
-        apiInfo: { methodName: "getCredential() [SMS Auto-Read]", category: "Common Library (CL)", details: "SMS push notification arrives on enter OTP screen; auto-read fills 6-digit OTP token.", xml: null }
+        phoneState: 'cl-step-3-receive'
       },
       {
         stepNum: 12,
@@ -787,8 +733,7 @@
         desc: "User enters the new 6-digit UPI PIN on the secure Common Library SafePad keypad.",
         activeBlocks: ['block-payer-app', 'block-cl'],
         activeWires: ['wire-cl-req'],
-        phoneState: 'cl-step-4',
-        apiInfo: { methodName: "getCredential()", category: "Common Library (CL)", details: "CL captures user's proposed 6-digit MPIN.", xml: null }
+        phoneState: 'cl-step-4'
       },
       {
         stepNum: 13,
@@ -796,8 +741,7 @@
         desc: "User confirms the new 6-digit UPI PIN. Common Library packages Card, OTP, and PIN into an encrypted CredBlock.",
         activeBlocks: ['block-payer-app', 'block-cl'],
         activeWires: ['wire-cl-req'],
-        phoneState: 'cl-step-5',
-        apiInfo: { methodName: "getCredential()", category: "Common Library (CL)", details: "CL validates confirmation match and encrypts payload with Bank Public Key.", xml: null }
+        phoneState: 'cl-step-5'
       },
       {
         stepNum: 14,
@@ -805,8 +749,7 @@
         desc: "<b>Arrow #8 [Resp]:</b> Common Library outputs the encrypted CredBlock back to Payer APP. Cleartext is wiped from memory.",
         activeBlocks: ['block-cl', 'block-payer-app'],
         activeWires: ['wire-cl-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "getCredential() [Callback]", category: "Common Library (CL)", details: "Outputs Base64-encrypted CredBlock containing Card, Expiry, OTP, and MPIN.", xml: null }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 15,
@@ -814,8 +757,7 @@
         desc: "<b>Arrow #9 [Req]:</b> Payer APP transmits the <code>ReqRegMob</code> intent with encrypted credentials to Payer PSP.",
         activeBlocks: ['block-payer-app', 'block-payer-psp'],
         activeWires: ['wire-psp-req'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "ReqRegMob [Initiate]", category: "Mobile to PSP", details: "Payer PSP prepares registration payload.", xml: null }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 16,
@@ -823,8 +765,7 @@
         desc: "<b>Arrow #10 [Req]:</b> Payer PSP sends <code>ReqRegMob</code> API to Central Switch.",
         activeBlocks: ['block-payer-psp', 'block-central-switch'],
         activeWires: ['wire-switch-req'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "ReqRegMob", category: "UPI Protocol", details: "Switch receives registration order.", xml: `<upi:ReqRegMob>\n  <Payer addr="userABC@bankA" ifsc="BKNA000101"/>\n  <CredBlock>RSA_ENC_CRED_BLOCK_...</CredBlock>\n</upi:ReqRegMob>` }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 17,
@@ -832,48 +773,51 @@
         desc: "<b>Arrow #11 [Req]:</b> Central Switch forwards <code>ReqRegMob</code> to user's issuing bank.",
         activeBlocks: ['block-central-switch', 'block-payer-bank'],
         activeWires: ['wire-bank-req'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "ReqRegMob", category: "UPI Protocol", details: "Issuing bank receives credential provisioning order.", xml: null }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 18,
-        title: "Payer's Bank <-> CBS & HSM [Verify OTP, Card & Set PIN]",
-        desc: "<b>Arrows #12, #13, #14 & #15:</b> Bank A CBS verifies Card and OTP. Bank HSM provisions new 6-digit MPIN hash in secure vault.",
-        activeBlocks: ['block-payer-bank', 'block-payer-hsm', 'block-payer-cbs'],
-        activeWires: ['wire-hsm-req', 'wire-hsm-resp', 'wire-cbs-req', 'wire-cbs-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "Bank's internal APIs (out of UPI purview)", category: "Internal Bank CBS & HSM", details: "CBS validates Card & OTP; HSM provisions new customer MPIN hash.", xml: null }
+        title: "Payer's Bank -> Payer Bank's HSM [Verify OTP, Card & Set PIN]",
+        desc: "<b>Arrow #12 [Req]:</b> Payer's Bank passes the encrypted CredBlock (card digits, OTP and new PIN) to its Hardware Security Module for verification.",
+        activeBlocks: ['block-payer-bank', 'block-payer-hsm'],
+        activeWires: ['wire-hsm-req'],
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 19,
-        title: "Payer's Bank -> Central Switch [RespRegMob Success]",
-        desc: "<b>Arrow #16 [Resp]:</b> User's bank responds to Central Switch confirming successful PIN setup.",
-        activeBlocks: ['block-payer-bank', 'block-central-switch'],
-        activeWires: ['wire-bank-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "RespRegMob", category: "UPI Protocol", details: "PIN successfully provisioned.", xml: `<upi:RespRegMob>\n  <Status>SUCCESS_PIN_PROVISIONED</Status>\n</upi:RespRegMob>` }
+        title: "Payer Bank's HSM -> Payer's Bank [PIN Set Confirmation]",
+        desc: "<b>Arrow #13 [Resp]:</b> HSM verifies the card details and OTP, provisions the new 6-digit MPIN hash in its secure vault and confirms to the bank.",
+        activeBlocks: ['block-payer-hsm', 'block-payer-bank'],
+        activeWires: ['wire-hsm-resp'],
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 20,
-        title: "Central Switch -> Payer PSP [RespRegMob Forwarded]",
-        desc: "<b>Arrow #17 [Resp]:</b> Central Switch forwards <code>RespRegMob</code> confirmation to Payer PSP.",
-        activeBlocks: ['block-central-switch', 'block-payer-psp'],
-        activeWires: ['wire-switch-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "RespRegMob", category: "UPI Protocol", details: "PSP receives registration acknowledgment.", xml: null }
+        title: "Payer's Bank -> Central Switch [RespRegMob Success]",
+        desc: "<b>Arrow #14 [Resp]:</b> User's bank responds to Central Switch confirming successful PIN setup.",
+        activeBlocks: ['block-payer-bank', 'block-central-switch'],
+        activeWires: ['wire-bank-resp'],
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 21,
+        title: "Central Switch -> Payer PSP [RespRegMob Forwarded]",
+        desc: "<b>Arrow #15 [Resp]:</b> Central Switch forwards <code>RespRegMob</code> confirmation to Payer PSP.",
+        activeBlocks: ['block-central-switch', 'block-payer-psp'],
+        activeWires: ['wire-switch-resp'],
+        phoneState: 'pending-clearing'
+      },
+      {
+        stepNum: 22,
         title: "Payer PSP -> Payer APP [PIN Setup Complete]",
-        desc: "<b>Arrow #18 [Resp]:</b> Payer PSP notifies Payer APP. Phone screen displays green <b>PIN SET SUCCESSFUL</b> screen with confetti.",
+        desc: "<b>Arrow #16 [Resp]:</b> Payer PSP notifies Payer APP. Phone screen displays green <b>PIN SET SUCCESSFUL</b> screen with confetti.",
         activeBlocks: ['block-payer-psp', 'block-payer-app'],
         activeWires: ['wire-psp-resp'],
-        phoneState: 'success-pin',
-        apiInfo: { methodName: "RespRegMob [Client Finality]", category: "PSP to Mobile", details: "Terminal renders PIN Set Successful screen with confetti.", xml: null }
+        phoneState: 'success-pin'
       }
     ];
 
-    // BALANCE ENQUIRY FLOW (12 STEPS)
+    // BALANCE ENQUIRY FLOW (15 STEPS)
     const BALANCE_FLOW_STEPS = [
       {
         stepNum: 1,
@@ -881,8 +825,7 @@
         desc: "Payer opens the FastPay+ application and taps on <b>Check Balance</b>.",
         activeBlocks: ['block-payer-app'],
         activeWires: [],
-        phoneState: 'home-screen',
-        apiInfo: { methodName: "UI Client Event (App Launch)", category: "Mobile Client", details: "Terminal renders the application home screen.", xml: null }
+        phoneState: 'home-screen'
       },
       {
         stepNum: 2,
@@ -890,8 +833,7 @@
         desc: "Payer on FastPay+ App selects <b>Bank A (•••• 4821)</b> to query available ledger balance.",
         activeBlocks: ['block-payer-app'],
         activeWires: [],
-        phoneState: 'bal-select-acct',
-        apiInfo: { methodName: "UI Client Event (Account Selection)", category: "Mobile Client", details: "Payer taps Check Balance on primary linked account.", xml: null }
+        phoneState: 'bal-select-acct'
       },
       {
         stepNum: 3,
@@ -899,8 +841,7 @@
         desc: "<b>Arrow #1 [Req]:</b> Payer APP redirects to Common Library interface to capture security PIN.",
         activeBlocks: ['block-payer-app', 'block-cl'],
         activeWires: ['wire-cl-req'],
-        phoneState: 'cl-pin-entry',
-        apiInfo: { methodName: "getCredential()", category: "Common Library (CL)", details: "Payer enters 6-digit MPIN in isolated sandbox.", xml: null }
+        phoneState: 'cl-pin-entry'
       },
       {
         stepNum: 4,
@@ -908,8 +849,7 @@
         desc: "<b>Arrow #2 [Resp]:</b> Common Library encrypts PIN block with Bank A Public Key and returns encrypted token.",
         activeBlocks: ['block-cl', 'block-payer-app'],
         activeWires: ['wire-cl-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "getCredential() [Response]", category: "Common Library (CL)", details: "Encrypted MPIN token output.", xml: null }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 5,
@@ -917,8 +857,7 @@
         desc: "<b>Arrow #3 [Req]:</b> Balance enquiry request sent to Payer PSP with encrypted credentials.",
         activeBlocks: ['block-payer-app', 'block-payer-psp'],
         activeWires: ['wire-psp-req'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "ReqBalEnq [Initiation]", category: "Mobile to PSP", details: "Payer APP sends balance query with encrypted credentials.", xml: null }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 6,
@@ -926,8 +865,7 @@
         desc: "<b>Arrow #4 [Req]:</b> Payer PSP sends <code>ReqBalEnq</code> request to Central Switch with Account Number, BIC (<code>BKNA000101</code>), and encrypted credentials.",
         activeBlocks: ['block-payer-psp', 'block-central-switch'],
         activeWires: ['wire-switch-req'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "ReqBalEnq", category: "UPI Protocol", details: "Switch receives ReqBalEnq.", xml: `<upi:ReqBalEnq>\n  <Payer accNo="4821" ifsc="BKNA000101"/>\n  <CredBlock>RSA_ENC_PIN_BLOCK...</CredBlock>\n</upi:ReqBalEnq>` }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 7,
@@ -935,61 +873,285 @@
         desc: "<b>Arrow #5 [Req]:</b> Central Switch forwards <code>ReqBalEnq</code> to user's issuing bank.",
         activeBlocks: ['block-central-switch', 'block-payer-bank'],
         activeWires: ['wire-bank-req'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "ReqBalEnq", category: "UPI Protocol", details: "Routes inquiry to issuing bank core.", xml: null }
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 8,
-        title: "User's Bank Decodes PIN in HSM & Checks Balance in CBS",
-        desc: "<b>Arrows #6, #7, #8 & #9:</b> User's bank verifies PIN in HSM and queries CBS ledger for current balance.",
-        activeBlocks: ['block-payer-bank', 'block-payer-hsm', 'block-payer-cbs'],
-        activeWires: ['wire-hsm-req', 'wire-hsm-resp', 'wire-cbs-req', 'wire-cbs-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "Bank's internal APIs (out of UPI purview)", category: "Internal Bank CBS & HSM", details: "HSM validates PIN hash; CBS queries ledger account.", xml: null }
+        title: "User's Bank -> Payer Bank's HSM [Verify PIN]",
+        desc: "<b>Arrow #6 [Req]:</b> User's bank sends the encrypted PIN block to its Hardware Security Module for verification.",
+        activeBlocks: ['block-payer-bank', 'block-payer-hsm'],
+        activeWires: ['wire-hsm-req'],
+        phoneState: 'pending-clearing'
       },
       {
         stepNum: 9,
+        title: "Payer Bank's HSM -> User's Bank [PIN Verified]",
+        desc: "<b>Arrow #7 [Resp]:</b> HSM decrypts and verifies the PIN, then returns the authorization result to the bank.",
+        activeBlocks: ['block-payer-hsm', 'block-payer-bank'],
+        activeWires: ['wire-hsm-resp'],
+        phoneState: 'pending-clearing'
+      },
+      {
+        stepNum: 10,
+        title: "User's Bank -> Payer Bank's CBS [Query Balance]",
+        desc: "<b>Arrow #8 [Req]:</b> With the PIN verified, the bank queries its Core Banking System (CBS) for the current ledger balance.",
+        activeBlocks: ['block-payer-bank', 'block-payer-cbs'],
+        activeWires: ['wire-cbs-req'],
+        phoneState: 'pending-clearing'
+      },
+      {
+        stepNum: 11,
+        title: "Payer Bank's CBS -> User's Bank [Balance Response]",
+        desc: "<b>Arrow #9 [Resp]:</b> CBS returns the available balance (₹1,45,000.00) to the bank.",
+        activeBlocks: ['block-payer-cbs', 'block-payer-bank'],
+        activeWires: ['wire-cbs-resp'],
+        phoneState: 'pending-clearing'
+      },
+      {
+        stepNum: 12,
         title: "User's Bank -> Central Switch [RespBalEnq]",
         desc: "<b>Arrow #10 [Resp]:</b> User's bank responds to Central Switch with verified balance payload (₹1,45,000.00).",
         activeBlocks: ['block-payer-bank', 'block-central-switch'],
         activeWires: ['wire-bank-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "RespBalEnq", category: "UPI Protocol", details: "Issuing bank returns balance confirmation.", xml: `<upi:RespBalEnq>\n  <Balance curr="INR" value="145000.00"/>\n  <Status>SUCCESS</Status>\n</upi:RespBalEnq>` }
+        phoneState: 'pending-clearing'
       },
       {
-        stepNum: 10,
+        stepNum: 13,
         title: "Central Switch -> Payer PSP [RespBalEnq Forwarded]",
         desc: "<b>Arrow #11 [Resp]:</b> Central Switch delivers <code>RespBalEnq</code> to Payer PSP.",
         activeBlocks: ['block-central-switch', 'block-payer-psp'],
         activeWires: ['wire-switch-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "RespBalEnq", category: "UPI Protocol", details: "Switch forwards balance acknowledgment.", xml: null }
+        phoneState: 'pending-clearing'
       },
       {
-        stepNum: 11,
+        stepNum: 14,
         title: "Payer PSP -> Payer APP [Balance Transmitted]",
         desc: "<b>Arrow #12 [Resp]:</b> Payer PSP forwards response to Payer APP.",
         activeBlocks: ['block-payer-psp', 'block-payer-app'],
         activeWires: ['wire-psp-resp'],
-        phoneState: 'pending-clearing',
-        apiInfo: { methodName: "RespBalEnq [Client Delivery]", category: "PSP to Mobile", details: "Mobile client receives verified balance data.", xml: null }
+        phoneState: 'pending-clearing'
       },
       {
-        stepNum: 12,
+        stepNum: 15,
         title: "Balance Displayed in Full Screen on Payer APP",
         desc: "Verified account balance (<b>₹1,45,000.00</b>) is cleanly displayed to the user on Payer APP.",
         activeBlocks: ['block-payer-app'],
         activeWires: [],
-        phoneState: 'success-balance',
-        apiInfo: { methodName: "UI Client Event (Balance Display)", category: "Mobile Client", details: "Terminal renders full-screen balance view.", xml: null }
+        phoneState: 'success-balance'
       }
     ];
 
     // =========================================================================
     // 2. PHONE SCREEN RENDERER (CLEAN UI, NON-TOUCHABLE, GHOST PRESSES)
     // =========================================================================
-    function renderPhoneScreen(state) {
+    // End-of-flow: ghost-tap Done / Back to Homepage, slide the screen out, slide Home in
+    function scheduleReturnHome(frame) {
+      setTimeout(() => {
+        if (window.animFrameId !== frame) return;
+        const btn = document.getElementById('sim-back-home');
+        if (!btn) return;
+        btn.classList.add('scale-95', 'bg-slate-700');
+        setTimeout(() => {
+          if (window.animFrameId !== frame) return;
+          btn.classList.remove('scale-95', 'bg-slate-700');
+          const container = document.getElementById('phone-display-container');
+          const screen = container && container.firstElementChild;
+          if (screen) screen.classList.add('screen-exit');
+          setTimeout(() => {
+            if (window.animFrameId !== frame) return;
+            renderPhoneScreen('home-screen', { fromDone: true, force: true });
+          }, 350);
+        }, 220);
+      }, 2200);
+    }
+
+    // ---- Pay flows: shared helpers -------------------------------------------------
+    function getPayee() { return PAYEE[currentFlowType] || PAYEE.pay; }
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const frameLive = f => window.animFrameId === f;
+
+    function pressButton(el, pressedClasses) {
+      if (!el) return;
+      el.classList.add('scale-95', ...pressedClasses);
+      setTimeout(() => el.classList.remove('scale-95', ...pressedClasses), 200);
+    }
+
+    function payHeaderHtml(P) {
+      return `
+        <div class="flex items-center gap-1.5 mb-3 text-slate-800">
+          <i data-lucide="chevron-left" class="w-5 h-5 text-slate-500"></i>
+          <h3 class="text-sm font-bold">${P.screenTitle}</h3>
+        </div>`;
+    }
+
+    // Screen: payer types the VPA / mobile number, taps Verify, then sees a processing animation
+    function renderPayEntryScreen(state, frame) {
+      const P = getPayee();
       const container = document.getElementById('phone-display-container');
+      const verifying = state === 'pay-verifying';
+      const prefixHtml = P.prefix
+        ? `<span class="pr-2.5 mr-0.5 border-r border-slate-200 text-sm font-bold text-slate-600">${P.prefix}</span>` : '';
+
+      container.innerHTML = `
+        <div class="h-full flex flex-col py-2 px-2 bg-slate-50">
+          ${payHeaderHtml(P)}
+          <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div>
+              <span class="text-[11px] font-bold text-slate-500">${P.fieldLabel}</span>
+              <div id="pay-input-box" class="mt-2 flex items-center gap-2 rounded-2xl px-3 py-3 border-2 ${verifying ? 'border-slate-200 bg-slate-50' : 'border-orange-400 bg-white'} transition-colors">
+                ${prefixHtml}
+                <span id="pay-input-text" class="font-mono text-[15px] text-slate-900 tracking-wide">${verifying ? P.input : ''}</span>
+                <span id="pay-caret" class="w-0.5 h-5 bg-orange-500 animate-pulse ${verifying ? 'hidden' : ''}"></span>
+                <span id="pay-placeholder" class="font-mono text-[13px] text-slate-400 ${verifying ? 'hidden' : ''}">${P.placeholder}</span>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-2 leading-snug">${P.hint}</p>
+            </div>
+            ${verifying ? `
+              <div class="w-full py-3 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center gap-2.5">
+                <div class="w-5 h-5 border-[3px] border-orange-200 border-t-orange-500 rounded-full animate-spinner"></div>
+                <span class="text-sm font-bold text-orange-600">${P.verifyingText}</span>
+              </div>` : `
+              <button id="sim-verify-btn" class="w-full py-3.5 rounded-2xl bg-slate-300 text-white font-bold text-sm transition-all duration-150">Verify</button>`}
+          </div>
+        </div>`;
+
+      if (verifying) return;
+
+      (async () => {
+        await sleep(500);
+        if (!frameLive(frame)) return;
+        const txt = document.getElementById('pay-input-text');
+        const ph = document.getElementById('pay-placeholder');
+        if (ph) ph.classList.add('hidden');
+        for (let i = 1; i <= P.input.length; i++) {
+          if (txt) txt.textContent = P.input.slice(0, i);
+          await sleep(P.typeMs);
+          if (!frameLive(frame)) return;
+        }
+        await sleep(300);
+        if (!frameLive(frame)) return;
+        const btn = document.getElementById('sim-verify-btn');
+        if (btn) {
+          btn.classList.remove('bg-slate-300');
+          btn.classList.add('bg-orange-500', 'shadow-lg', 'shadow-orange-500/20');
+        }
+        await sleep(350);
+        if (!frameLive(frame)) return;
+        pressButton(document.getElementById('sim-verify-btn'), ['bg-orange-600']);
+      })();
+    }
+
+    function acctRowHtml(i, selected) {
+      const a = DEBIT_ACCOUNTS[i];
+      return `
+        <div id="pay-acct-${i}" class="flex items-center gap-3 p-2.5 rounded-2xl border-2 transition-all duration-150 ${selected ? 'border-orange-400 bg-orange-50' : 'border-slate-200 bg-white'}">
+          <div class="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-bold text-sm shrink-0">${a.letter}</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-bold text-slate-900">${a.bank}</div>
+            <div class="text-[11px] text-slate-500 font-mono">${a.sub}</div>
+          </div>
+          <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${selected ? 'border-orange-500' : 'border-slate-300'}">
+            <span class="w-2 h-2 rounded-full bg-orange-500 ${selected ? '' : 'hidden'}"></span>
+          </div>
+        </div>`;
+    }
+
+    // Screen: verified payee, amount entry, debit account selection, Proceed to Pay
+    function renderPayDetailsScreen(state, frame) {
+      const P = getPayee();
+      const container = document.getElementById('phone-display-container');
+      const amtFilled = state !== 'pay-amount';
+      const acctSelected = state === 'pay-proceed';
+      const btnEnabled = acctSelected;
+
+      const payeeSub = P.vpa
+        ? `<div class="text-[11px] text-slate-500 font-mono truncate">${P.vpa}</div>
+           <div class="text-[10px] text-slate-400 font-mono">${P.mobileShown}</div>`
+        : `<div class="text-[10px] text-emerald-700 font-bold">Verified payee</div>`;
+
+      container.innerHTML = `
+        <div class="h-full flex flex-col py-2 px-2 bg-slate-50">
+          ${payHeaderHtml(P)}
+          <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm space-y-3">
+            <div id="pay-payee-card" class="flex items-center gap-3 pb-3 border-b border-slate-100 ${state === 'pay-amount' ? 'pop-in' : ''}">
+              <div class="w-10 h-10 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                <i data-lucide="${P.icon}" class="w-5 h-5"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="text-sm font-bold text-slate-900 flex items-center gap-1">
+                  <span>${P.name}</span>
+                  <i data-lucide="badge-check" class="w-4 h-4 text-emerald-600 fill-emerald-100"></i>
+                </div>
+                ${payeeSub}
+              </div>
+            </div>
+
+            <div class="text-center py-3 bg-slate-50 rounded-2xl border border-slate-100">
+              <span class="text-[10px] tracking-wider text-slate-500 font-bold block mb-1">Enter Amount</span>
+              <div class="flex items-center justify-center text-4xl font-black text-slate-900 font-mono tracking-tight">
+                <span>₹</span><span id="pay-amt-text">${amtFilled ? P.amount : ''}</span><span id="pay-amt-caret" class="w-0.5 h-8 bg-orange-500 animate-pulse ml-0.5 ${amtFilled ? 'hidden' : ''}"></span>
+              </div>
+            </div>
+
+            <div id="pay-acct-wrap" class="space-y-2 transition-opacity duration-300 ${state === 'pay-amount' ? 'opacity-40' : ''}">
+              <span class="text-[10px] text-slate-400 block font-bold">Paying From</span>
+              <div id="pay-acct-list" class="space-y-2">
+                ${acctRowHtml(0, acctSelected)}
+                ${acctRowHtml(1, false)}
+              </div>
+            </div>
+
+            <button id="sim-pay-btn" class="w-full py-3.5 rounded-2xl text-white font-bold text-sm transition-all duration-150 ${btnEnabled ? 'bg-orange-500 shadow-lg shadow-orange-500/20' : 'bg-slate-300'}">
+              Proceed to Pay
+            </button>
+          </div>
+        </div>`;
+
+      (async () => {
+        if (state === 'pay-amount') {
+          await sleep(600);
+          if (!frameLive(frame)) return;
+          const txt = document.getElementById('pay-amt-text');
+          for (let i = 1; i <= P.amount.length; i++) {
+            if (txt) txt.textContent = P.amount.slice(0, i);
+            await sleep(300);
+            if (!frameLive(frame)) return;
+          }
+          const caret = document.getElementById('pay-amt-caret');
+          if (caret) caret.classList.add('hidden');
+          const wrap = document.getElementById('pay-acct-wrap');
+          if (wrap) wrap.classList.remove('opacity-40');
+        } else if (state === 'pay-account') {
+          await sleep(700);
+          if (!frameLive(frame)) return;
+          const row = document.getElementById('pay-acct-0');
+          if (row) row.classList.add('scale-[0.97]', 'bg-slate-50');
+          await sleep(220);
+          if (!frameLive(frame)) return;
+          const cur = document.getElementById('pay-acct-0');
+          if (cur) cur.outerHTML = acctRowHtml(0, true);
+          await sleep(300);
+          if (!frameLive(frame)) return;
+          const btn = document.getElementById('sim-pay-btn');
+          if (btn) {
+            btn.classList.remove('bg-slate-300');
+            btn.classList.add('bg-orange-500', 'shadow-lg', 'shadow-orange-500/20');
+          }
+        } else if (state === 'pay-proceed') {
+          await sleep(800);
+          if (!frameLive(frame)) return;
+          pressButton(document.getElementById('sim-pay-btn'), ['bg-orange-600']);
+        }
+      })();
+    }
+
+    function renderPhoneScreen(state, opts) {
+      opts = opts || {};
+      const container = document.getElementById('phone-display-container');
+
+      // Same success screen re-requested (e.g. Pay flow steps 20 -> 21): keep it, don't restart confetti/animation
+      if (state === 'success-txn' && window.currentPhoneState === 'success-txn' && !opts.force) return;
+      window.currentPhoneState = state;
       const pushBanner = document.getElementById('sms-push-banner');
 
       // STRICT CHECK: Only display the native SMS push notification when CL is on the Enter OTP screen
@@ -1029,18 +1191,22 @@
 
               <!-- Main Action Buttons -->
               <div class="flex-1 px-4 mt-2">
-                <div class="grid grid-cols-3 gap-3">
-                  <button id="sim-btn-pay" class="flex flex-col items-center justify-center p-3 rounded-2xl border border-slate-100 shadow-sm bg-white transition-transform duration-100 ghost-press">
+                <div class="grid grid-cols-4 gap-2">
+                  <button id="sim-btn-pay" class="flex flex-col items-center justify-center px-1 py-3 rounded-2xl text-center border border-slate-100 shadow-sm bg-white transition-transform duration-100 ghost-press">
                     <i data-lucide="send" class="w-6 h-6 text-orange-500 mb-2"></i>
-                    <span class="text-[10px] font-bold text-slate-700">Pay VPA</span>
+                    <span class="text-[9px] leading-tight font-bold text-slate-700">Pay VPA</span>
                   </button>
-                  <button id="sim-btn-balance" class="flex flex-col items-center justify-center p-3 rounded-2xl border border-slate-100 shadow-sm bg-white transition-transform duration-100 ghost-press">
+                  <button id="sim-btn-mobile" class="flex flex-col items-center justify-center px-1 py-3 rounded-2xl text-center border border-slate-100 shadow-sm bg-white transition-transform duration-100 ghost-press">
+                    <i data-lucide="smartphone" class="w-6 h-6 text-orange-500 mb-2"></i>
+                    <span class="text-[9px] leading-tight font-bold text-slate-700">Pay Mobile</span>
+                  </button>
+                  <button id="sim-btn-balance" class="flex flex-col items-center justify-center px-1 py-3 rounded-2xl text-center border border-slate-100 shadow-sm bg-white transition-transform duration-100 ghost-press">
                     <span class="text-2xl mb-1">👛</span>
-                    <span class="text-[10px] font-bold text-slate-700">Check Balance</span>
+                    <span class="text-[9px] leading-tight font-bold text-slate-700">Check Balance</span>
                   </button>
-                  <button id="sim-btn-pin" class="flex flex-col items-center justify-center p-3 rounded-2xl border border-slate-100 shadow-sm bg-white transition-transform duration-100 ghost-press">
+                  <button id="sim-btn-pin" class="flex flex-col items-center justify-center px-1 py-3 rounded-2xl text-center border border-slate-100 shadow-sm bg-white transition-transform duration-100 ghost-press">
                     <i data-lucide="key" class="w-6 h-6 text-slate-500 mb-2"></i>
-                    <span class="text-[10px] font-bold text-slate-700">Reset PIN</span>
+                    <span class="text-[9px] leading-tight font-bold text-slate-700">Reset PIN</span>
                   </button>
                 </div>
               </div>
@@ -1067,10 +1233,12 @@
 
             </div>
           `;
+          if (opts.fromDone && container.firstElementChild) container.firstElementChild.classList.add('screen-enter-back');
           setTimeout(() => {
-            if(window.animFrameId === currentFrame) {
+            if(window.animFrameId === currentFrame && !opts.fromDone) {
               let btnId = '';
               if (currentFlowType === 'pay') btnId = 'sim-btn-pay';
+              if (currentFlowType === 'mobile') btnId = 'sim-btn-mobile';
               if (currentFlowType === 'pin') btnId = 'sim-btn-pin';
               if (currentFlowType === 'balance') btnId = 'sim-btn-balance';
               
@@ -1083,59 +1251,15 @@
           }, 600);
           break;
 
-        case 'pay-init':
-          container.innerHTML = `
-            <div class="h-full flex flex-col justify-between py-2 px-2 bg-slate-50">
-              <div class="space-y-3">
-                <div class="flex items-center gap-1.5 mb-1 text-slate-800">
-                  <i data-lucide="chevron-left" class="w-5 h-5 text-slate-500"></i>
-                  <h3 class="text-sm font-bold">Pay to VPA</h3>
-                </div>
+        case 'pay-entry':
+        case 'pay-verifying':
+          renderPayEntryScreen(state, currentFrame);
+          break;
 
-                <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-                  <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
-                    <div class="w-10 h-10 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center font-bold">
-                      <i data-lucide="store" class="w-5 h-5"></i>
-                    </div>
-                    <div>
-                      <div class="text-sm font-bold text-slate-900 flex items-center gap-1">
-                        <span>Merchant ABC</span>
-                        <i data-lucide="badge-check" class="w-4 h-4 text-emerald-600 fill-emerald-100"></i>
-                      </div>
-                      <div class="text-[11px] text-slate-500 font-mono">merchantABC@bankB</div>
-                    </div>
-                  </div>
-
-                  <div class="text-center py-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <span class="text-[10px] uppercase tracking-wider text-slate-500 font-bold block mb-1">Invoice Amount</span>
-                    <div class="text-4xl font-black text-slate-900 font-mono tracking-tight">₹750.00</div>
-                  </div>
-
-                  <div class="p-3 rounded-2xl border border-slate-100 bg-white flex items-center justify-between text-xs">
-                    <div>
-                      <span class="text-[10px] text-slate-400 block uppercase font-bold">Paying From</span>
-                      <span class="font-bold text-slate-900">Bank A</span>
-                      <span class="text-slate-500 font-mono text-[11px]">(•••• 4821)</span>
-                    </div>
-                    <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">Linked</span>
-                  </div>
-
-                  <button id="sim-pay-btn" class="w-full py-3.5 rounded-2xl bg-orange-500 text-white font-bold text-sm shadow-lg shadow-orange-500/20 transition-transform duration-100">
-                    Proceed to Pay
-                  </button>
-                </div>
-              </div>
-            </div>
-          `;
-          setTimeout(() => {
-            if(window.animFrameId === currentFrame) {
-              const btn = document.getElementById('sim-pay-btn');
-              if(btn) {
-                btn.classList.add('scale-95', 'bg-orange-600');
-                setTimeout(() => btn.classList.remove('scale-95', 'bg-orange-600'), 200);
-              }
-            }
-          }, 800);
+        case 'pay-amount':
+        case 'pay-account':
+        case 'pay-proceed':
+          renderPayDetailsScreen(state, currentFrame);
           break;
 
         case 'cl-pin-entry':
@@ -1315,7 +1439,7 @@
                 </div>
                 <h2 class="text-3xl font-black font-mono text-slate-900 tracking-tight">₹750.00</h2>
                 <span class="text-sm font-bold text-slate-800 mt-2">Payment Successful</span>
-                <p class="text-xs text-slate-500 mt-1">Paid to Merchant ABC</p>
+                <p class="text-xs text-slate-500 mt-1">Paid to ${getPayee().name}</p>
               </div>
 
               <div class="w-full bg-slate-50/50 border border-slate-200 rounded-3xl p-5 text-left text-[11px] font-mono space-y-4 shadow-sm mb-6">
@@ -1327,10 +1451,16 @@
                   <span>Debited A/C:</span>
                   <span class="text-slate-900 font-bold">Bank A (•••• 4821)</span>
                 </div>
+                ${getPayee().vpa ? `
+                <div class="flex justify-between items-center text-slate-500">
+                  <span>Payee VPA:</span>
+                  <span class="text-slate-900 font-bold">${getPayee().vpa}</span>
+                </div>` : ''}
               </div>
-              <button class="w-full py-4 rounded-3xl bg-[#0f172a] text-white font-bold text-sm">Done</button>
+              <button id="sim-back-home" class="w-full py-4 rounded-3xl bg-[#0f172a] text-white font-bold text-sm transition-transform duration-100 ghost-press">Done</button>
             </div>
           `;
+          scheduleReturnHome(currentFrame);
           break;
 
         case 'success-pin':
@@ -1344,9 +1474,10 @@
               <p class="text-sm text-slate-500 mt-2 max-w-[240px]">
                 Your 6-digit UPI PIN is now active for Bank A.
               </p>
-              <button class="w-full py-4 rounded-3xl bg-[#0f172a] text-white font-bold text-sm mt-10">Done</button>
+              <button id="sim-back-home" class="w-full py-4 rounded-3xl bg-[#0f172a] text-white font-bold text-sm mt-10 transition-transform duration-100 ghost-press">Done</button>
             </div>
           `;
+          scheduleReturnHome(currentFrame);
           break;
 
         case 'success-balance':
@@ -1370,15 +1501,7 @@
               </button>
             </div>
           `;
-          setTimeout(() => {
-            if(window.animFrameId === currentFrame) {
-              const btn = document.getElementById('sim-back-home');
-              if(btn) {
-                btn.classList.add('scale-95', 'bg-slate-700');
-                setTimeout(() => btn.classList.remove('scale-95', 'bg-slate-700'), 200);
-              }
-            }
-          }, 2500);
+          scheduleReturnHome(currentFrame);
           break;
 
         default:
@@ -1409,80 +1532,95 @@
     // =========================================================================
     // 3. SVG TOPOLOGY WIRE INJECTOR
     // =========================================================================
+    // Wire geometry (viewBox coordinates). Labels sit on / beside the wire they belong to.
+    const WIRE_GEOM = {
+      'wire-cl-req':           { d: 'M 89 282 L 89 141',   lx: 81,  ly: 214, a: 'end' },
+      'wire-cl-resp':          { d: 'M 121 141 L 121 279', lx: 129, ly: 214, a: 'start' },
+      'wire-psp-req':          { d: 'M 178 306 L 300 306', lx: 239, ly: 311, a: 'middle' },
+      'wire-psp-resp':         { d: 'M 302 334 L 180 334', lx: 241, ly: 339, a: 'middle' },
+      'wire-switch-req':       { d: 'M 448 306 L 570 306', lx: 509, ly: 311, a: 'middle' },
+      'wire-switch-resp':      { d: 'M 572 334 L 450 334', lx: 511, ly: 339, a: 'middle' },
+      'wire-bank-req':         { d: 'M 644 272 L 644 145', lx: 636, ly: 214, a: 'end' },
+      'wire-bank-resp':        { d: 'M 676 145 L 676 270', lx: 684, ly: 214, a: 'start' },
+      'wire-hsm-req':          { d: 'M 581 86 L 455 86',   lx: 518, ly: 91,  a: 'middle' },
+      'wire-hsm-resp':         { d: 'M 455 114 L 580 114', lx: 518, ly: 119, a: 'middle' },
+      'wire-cbs-req':          { d: 'M 739 86 L 855 86',   lx: 797, ly: 91,  a: 'middle' },
+      'wire-cbs-resp':         { d: 'M 856 114 L 740 114', lx: 798, ly: 119, a: 'middle' },
+      'wire-payee-psp-req':    { d: 'M 748 298 L 860 298', lx: 804, ly: 303, a: 'middle' },
+      'wire-payee-psp-resp':   { d: 'M 862 320 L 750 320', lx: 806, ly: 325, a: 'middle' },
+      'wire-payee-psp-notify': { d: 'M 748 342 L 860 342', lx: 804, ly: 347, a: 'middle' },
+      'wire-payee-bank-req':   { d: 'M 644 368 L 644 495', lx: 636, ly: 436, a: 'end' },
+      'wire-payee-bank-resp':  { d: 'M 676 497 L 676 370', lx: 684, ly: 436, a: 'start' },
+      'wire-payee-cbs-req':    { d: 'M 739 526 L 855 526', lx: 797, ly: 531, a: 'middle' },
+      'wire-payee-cbs-resp':   { d: 'M 856 554 L 740 554', lx: 798, ly: 559, a: 'middle' }
+    };
+
+    // Arrow numbers per wire, per flow. A wire reused later in the flow shows both numbers (e.g. "#1 · #9");
+    // only the number belonging to the current step lights up.
+    const FLOW_ARROWS = {
+      pay: {
+        'wire-cl-req': [1], 'wire-cl-resp': [2], 'wire-psp-req': [3], 'wire-switch-req': [4],
+        'wire-payee-psp-req': [5], 'wire-payee-psp-resp': [6], 'wire-bank-req': [7],
+        'wire-hsm-req': [8], 'wire-hsm-resp': [9], 'wire-cbs-req': [10], 'wire-cbs-resp': [11],
+        'wire-bank-resp': [12], 'wire-payee-bank-req': [13], 'wire-payee-cbs-req': [14],
+        'wire-payee-cbs-resp': [15], 'wire-payee-bank-resp': [16], 'wire-switch-resp': [17],
+        'wire-psp-resp': [18], 'wire-payee-psp-notify': [19]
+      },
+      pin: {
+        'wire-psp-req': [1, 9], 'wire-switch-req': [2, 10], 'wire-bank-req': [3, 11],
+        'wire-bank-resp': [4, 14], 'wire-switch-resp': [5, 15], 'wire-psp-resp': [6, 16],
+        'wire-cl-req': [7], 'wire-cl-resp': [8], 'wire-hsm-req': [12], 'wire-hsm-resp': [13]
+      },
+      balance: {
+        'wire-cl-req': [1], 'wire-cl-resp': [2], 'wire-psp-req': [3], 'wire-switch-req': [4],
+        'wire-bank-req': [5], 'wire-hsm-req': [6], 'wire-hsm-resp': [7], 'wire-cbs-req': [8],
+        'wire-cbs-resp': [9], 'wire-bank-resp': [10], 'wire-switch-resp': [11], 'wire-psp-resp': [12]
+      }
+    };
+
+    FLOW_ARROWS.mobile = FLOW_ARROWS.pay;
+
+    const FLOW_VIEWBOX = { pay: '0 30 1040 580', mobile: '0 30 1040 580', pin: '0 30 790 370', balance: '0 30 1040 370' };
+    const FLOW_HIDDEN_BLOCKS = {
+      pay: [],
+      mobile: [],
+      balance: ['block-payee-psp', 'block-payee-bank', 'block-payee-cbs'],
+      pin: ['block-payee-psp', 'block-payee-bank', 'block-payee-cbs', 'block-payer-cbs']
+    };
+    const ALL_BLOCK_IDS = ['block-cl', 'block-payer-app', 'block-payer-psp', 'block-central-switch', 'block-payee-psp', 'block-payer-bank', 'block-payer-hsm', 'block-payer-cbs', 'block-payee-bank', 'block-payee-cbs'];
+
     function injectSvgWires(flowType) {
       const g = document.getElementById('svg-wires-group');
       if (!g) return;
+      const arrows = FLOW_ARROWS[flowType] || FLOW_ARROWS.pay;
+      g.innerHTML = Object.entries(arrows).map(([id, nums]) => {
+        const w = WIRE_GEOM[id];
+        const label = nums.map((n, i) => (i ? '<tspan> · </tspan>' : '') + `<tspan data-n="${n}">#${n}</tspan>`).join('');
+        return `<path id="${id}" d="${w.d}" stroke="#475569" stroke-width="3" fill="none" marker-end="url(#arrow-neutral)" />` +
+          `<text id="label-${id}" x="${w.lx}" y="${w.ly}" text-anchor="${w.a}" fill="#94a3b8" font-size="14" font-family="monospace" font-weight="bold" stroke="#0b101d" stroke-width="5" stroke-linejoin="round" paint-order="stroke">${label}</text>`;
+      }).join('');
+    }
 
-      if (flowType === 'pay') {
-        g.innerHTML = `
-          <path id="wire-cl-req" d="M 75, 280 L 75, 140" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="42" y="210" fill="#64748b" font-size="11" font-family="monospace" font-weight="bold">#1 [Req]</text>
-          <path id="wire-cl-resp" d="M 105, 140 L 105, 280" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="115" y="210" fill="#64748b" font-size="11" font-family="monospace" font-weight="bold">#2 [Resp]</text>
-          <path id="wire-psp-req" d="M 155, 300 L 220, 300" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="175" y="292" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">#3</text>
-          <path id="wire-psp-resp" d="M 220, 320 L 155, 320" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="172" y="335" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">#18</text>
-          <path id="wire-switch-req" d="M 360, 300 L 470, 300" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="402" y="292" fill="#64748b" font-size="11" font-family="monospace" font-weight="bold">#4</text>
-          <path id="wire-switch-resp" d="M 470, 320 L 360, 320" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="402" y="335" fill="#64748b" font-size="11" font-family="monospace" font-weight="bold">#17</text>
-          <path id="wire-pay-5" d="M 630, 295 L 740, 295" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="675" y="287" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">#5</text>
-          <path id="wire-pay-6" d="M 740, 315 L 630, 315" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="675" y="330" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">#6</text>
-          <path id="wire-pay-19" d="M 630, 335 L 740, 335" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="675" y="350" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">#19</text>
-          <path id="wire-pay-7" d="M 535, 275 L 535, 145" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="495" y="210" fill="#64748b" font-size="11" font-family="monospace" font-weight="bold">#7 [Req]</text>
-          <path id="wire-bank-resp" d="M 565, 145 L 565, 275" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="575" y="210" fill="#64748b" font-size="11" font-family="monospace" font-weight="bold">#12 [Resp]</text>
-          <path id="wire-hsm-req" d="M 475, 98 L 365, 98" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="410" y="90" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">#8</text>
-          <path id="wire-hsm-resp" d="M 365, 122 L 475, 122" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="410" y="137" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">#9</text>
-          <path id="wire-cbs-req" d="M 625, 98 L 735, 98" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="670" y="90" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">#10</text>
-          <path id="wire-cbs-resp" d="M 735, 122 L 625, 122" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="670" y="137" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">#11</text>
-          <path id="wire-pay-13" d="M 535, 345 L 535, 475" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="490" y="410" fill="#64748b" font-size="11" font-family="monospace" font-weight="bold">#13 [Req]</text>
-          <path id="wire-pay-16" d="M 565, 475 L 565, 345" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="575" y="410" fill="#64748b" font-size="11" font-family="monospace" font-weight="bold">#16 [Resp]</text>
-          <path id="wire-pay-14" d="M 625, 498 L 735, 498" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="670" y="490" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">#14</text>
-          <path id="wire-pay-15" d="M 735, 522 L 625, 522" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="670" y="537" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">#15</text>
-        `;
-      } else {
-        // Pin Set & Balance Flows
-        g.innerHTML = `
-          <path id="wire-cl-req" d="M 75, 280 L 75, 140" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="38" y="210" fill="#64748b" font-size="11" font-family="monospace" font-weight="bold">[Req]</text>
-          <path id="wire-cl-resp" d="M 105, 140 L 105, 280" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="115" y="210" fill="#64748b" font-size="11" font-family="monospace" font-weight="bold">[Resp]</text>
-          <path id="wire-psp-req" d="M 155, 300 L 220, 300" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="175" y="292" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">[Req]</text>
-          <path id="wire-psp-resp" d="M 220, 320 L 155, 320" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="172" y="335" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">[Resp]</text>
-          <path id="wire-switch-req" d="M 360, 300 L 470, 300" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="402" y="292" fill="#64748b" font-size="11" font-family="monospace" font-weight="bold">[Req]</text>
-          <path id="wire-switch-resp" d="M 470, 320 L 360, 320" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="402" y="335" fill="#64748b" font-size="11" font-family="monospace" font-weight="bold">[Resp]</text>
-          <path id="wire-bank-req" d="M 535, 275 L 535, 145" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="495" y="210" fill="#64748b" font-size="11" font-family="monospace" font-weight="bold">[Req]</text>
-          <path id="wire-bank-resp" d="M 565, 145 L 565, 275" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="575" y="210" fill="#64748b" font-size="11" font-family="monospace" font-weight="bold">[Resp]</text>
-          <path id="wire-hsm-req" d="M 475, 98 L 365, 98" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="410" y="90" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">[Req]</text>
-          <path id="wire-hsm-resp" d="M 365, 122 L 475, 122" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="410" y="137" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">[Resp]</text>
-          <path id="wire-cbs-req" d="M 625, 98 L 735, 98" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="670" y="90" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">[Req]</text>
-          <path id="wire-cbs-resp" d="M 735, 122 L 625, 122" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#arrow-neutral)" />
-          <text x="670" y="137" fill="#64748b" font-size="10" font-family="monospace" font-weight="bold">[Resp]</text>
-        `;
-      }
+    function clearDiagramHighlights() {
+      document.querySelectorAll('#svg-wires-group path').forEach(wire => {
+        wire.setAttribute('stroke', '#475569');
+        wire.setAttribute('stroke-width', '3');
+        wire.setAttribute('marker-end', 'url(#arrow-neutral)');
+        wire.classList.remove('wire-active');
+      });
+      document.querySelectorAll('#svg-wires-group text').forEach(lbl => {
+        lbl.querySelectorAll('tspan[data-n]').forEach(t => { t.removeAttribute('fill'); t.removeAttribute('font-weight'); });
+      });
+      ALL_BLOCK_IDS.forEach(id => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        b.classList.remove('block-active');
+        const rect = b.querySelector('rect');
+        if (rect) {
+          rect.setAttribute('stroke', rect.dataset.stroke);
+          rect.setAttribute('stroke-width', rect.dataset.sw);
+        }
+      });
     }
 
     // =========================================================================
@@ -1492,96 +1630,26 @@
       currentFlowType = tab;
       resetSimulation();
 
-      const tabs = ['pay', 'pin', 'balance'];
-      tabs.forEach(t => {
-        const btn = document.getElementById(`fs-tab-${t}`);
-        if (btn) {
-          if (t === tab) {
-            btn.className = 'px-3 sm:px-4 py-1.5 text-xs font-bold rounded-lg transition bg-orange-500 text-white shadow shadow-orange-500/20';
-          } else {
-            btn.className = 'px-3 sm:px-4 py-1.5 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white';
-          }
-        }
-      });
+      const flowSelect = document.getElementById('flow-select');
+      if (flowSelect) flowSelect.value = tab;
 
-      const payeeBlocks = ['block-payee-psp', 'block-payee-bank', 'block-payee-cbs'];
-      payeeBlocks.forEach(id => {
+      const hidden = FLOW_HIDDEN_BLOCKS[tab] || [];
+      ALL_BLOCK_IDS.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.style.display = (tab === 'pay') ? 'block' : 'none';
+        if (el) el.style.display = hidden.includes(id) ? 'none' : '';
       });
 
+      const svg = document.getElementById('flow-svg');
+      if (svg) svg.setAttribute('viewBox', FLOW_VIEWBOX[tab] || FLOW_VIEWBOX.pay);
       injectSvgWires(tab);
 
+      const total = getActiveSteps().length;
+      const names = { pay: 'Pay to VPA Flow', mobile: 'Pay to Mobile Number Flow', pin: 'Pin Set Flow', balance: 'Balance Enquiry' };
       const titleEl = document.getElementById('fs-step-title');
-      const descEl = document.getElementById('fs-step-desc');
       const badgeEl = document.getElementById('fs-step-badge');
-      const indEl = document.getElementById('fs-step-indicator');
-
-      if (tab === 'pin') {
-        const total = PIN_SET_FLOW_STEPS.length;
-        if (titleEl) titleEl.innerText = `${total}-Step Pin Set Flow Ready (Sequential)`;
-        if (badgeEl) badgeEl.innerText = `STEP: 0 / ${total}`;
-        if (indEl) indEl.innerText = `STEP 0 / ${total}`;
-        renderPhoneScreen('home-screen');
-      } else if (tab === 'balance') {
-        const total = BALANCE_FLOW_STEPS.length;
-        if (titleEl) titleEl.innerText = `${total}-Step Balance Enquiry Ready`;
-        if (badgeEl) badgeEl.innerText = `STEP: 0 / ${total}`;
-        if (indEl) indEl.innerText = `STEP 0 / ${total}`;
-        renderPhoneScreen('home-screen');
-      } else {
-        const total = PAY_FLOW_STEPS.length;
-        if (titleEl) titleEl.innerText = `${total}-Step Pay Flow Ready`;
-        if (badgeEl) badgeEl.innerText = `STEP: 0 / ${total}`;
-        if (indEl) indEl.innerText = `STEP 0 / ${total}`;
-        renderPhoneScreen('home-screen');
-      }
-      renderApiBox(null);
-    }
-
-    function renderApiBox(apiObj) {
-      const container = document.getElementById('fs-api-container');
-      const badge = document.getElementById('fs-api-badge');
-      const methodTitle = document.getElementById('fs-method-title');
-      const descBox = document.getElementById('fs-step-desc');
-      if (!container || !badge) return;
-
-      if (!apiObj) {
-        badge.innerText = "AWAITING_STEP";
-        badge.className = "px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono text-[9px]";
-        if (methodTitle) methodTitle.innerText = "API / Method Payload";
-        if (descBox) descBox.innerHTML = "Click <b>Next</b> or <b>Simulate</b> to trace clearing hops across the network.";
-        container.innerHTML = `<div class="text-slate-600 italic text-center py-8 font-mono">Awaiting transaction hop execution...</div>`;
-        return;
-      }
-
-      badge.innerText = apiObj.category;
-      if (apiObj.methodName.includes("internal")) {
-        badge.className = "px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono text-[9px] border border-amber-500/30";
-      } else {
-        badge.className = "px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[9px] border border-emerald-500/30";
-      }
-
-      if (methodTitle) methodTitle.innerText = apiObj.methodName;
-      if (descBox) descBox.innerHTML = apiObj.details;
-
-      if (apiObj.xml) {
-        container.innerHTML = `
-          <pre class="w-full h-full overflow-auto p-2 rounded-xl bg-slate-900 border border-slate-800 font-mono text-[9.5px] text-emerald-300/90 leading-tight whitespace-pre">${escapeHtml(apiObj.xml)}</pre>
-        `;
-      } else {
-        container.innerHTML = `
-          <div class="h-full flex flex-col justify-center items-center text-center p-4">
-            <span class="text-xs font-bold text-slate-300 font-mono">${escapeHtml(apiObj.methodName)}</span>
-            <span class="text-[10px] text-slate-500 font-mono mt-1">Terminal UI Event / Internal Verification</span>
-          </div>
-        `;
-      }
-    }
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+      if (titleEl) titleEl.innerText = `${total}-Step ${names[tab]} Ready`;
+      if (badgeEl) badgeEl.innerText = `STEP: 0 / ${total}`;
+      renderPhoneScreen('home-screen');
     }
 
     function resetSimulation() {
@@ -1594,28 +1662,7 @@
       if (autoText) autoText.innerText = "Simulate (0.5s)";
       if (autoIcon) autoIcon.setAttribute('data-lucide', 'play');
 
-      const wires = document.querySelectorAll('#svg-wires-group path');
-      wires.forEach(wire => {
-        wire.setAttribute('stroke', '#334155');
-        wire.setAttribute('marker-end', 'url(#arrow-neutral)');
-        wire.classList.remove('wire-active');
-      });
-
-      const labels = document.querySelectorAll('#svg-wires-group text');
-      labels.forEach(lbl => lbl.setAttribute('fill', '#64748b'));
-
-      const allBlockIds = ['block-cl', 'block-payer-app', 'block-payer-psp', 'block-central-switch', 'block-payee-psp', 'block-payer-bank', 'block-payer-hsm', 'block-payer-cbs', 'block-payee-bank', 'block-payee-cbs'];
-      allBlockIds.forEach(id => {
-        const b = document.getElementById(id);
-        if (b) {
-          const rect = b.querySelector('rect');
-          if (rect) {
-            rect.removeAttribute('stroke-dasharray');
-            rect.setAttribute('stroke-width', b.id.includes('central-switch') ? '4' : (b.id.includes('bank') || b.id.includes('psp') ? '3.5' : '2'));
-          }
-          b.classList.remove('scale-105');
-        }
-      });
+      clearDiagramHighlights();
 
       const prevBtn = document.getElementById('btn-prev-step');
       const nextBtn = document.getElementById('btn-next-step');
@@ -1627,6 +1674,7 @@
     function getActiveSteps() {
       if (currentFlowType === 'pin') return PIN_SET_FLOW_STEPS;
       if (currentFlowType === 'balance') return BALANCE_FLOW_STEPS;
+      if (currentFlowType === 'mobile') return MOBILE_FLOW_STEPS;
       return PAY_FLOW_STEPS;
     }
 
@@ -1638,20 +1686,21 @@
       renderStep(currentStepIndex - 1);
     }
 
+    function getArrowNum(step) {
+      const m = /Arrow #(\d+)/.exec(step.desc || '');
+      return m ? m[1] : null;
+    }
+
     function renderStep(index) {
       const activeSteps = getActiveSteps();
       const step = activeSteps[index];
       if (!step) return;
 
       const badge = document.getElementById('fs-step-badge');
-      const ind = document.getElementById('fs-step-indicator');
       const title = document.getElementById('fs-step-title');
-
       if (badge) badge.innerText = `STEP: ${step.stepNum} / ${activeSteps.length}`;
-      if (ind) ind.innerText = `STEP ${step.stepNum} / ${activeSteps.length}`;
       if (title) title.innerText = step.title;
 
-      renderApiBox(step.apiInfo);
       if (step.phoneState) renderPhoneScreen(step.phoneState);
 
       const prevBtn = document.getElementById('btn-prev-step');
@@ -1659,38 +1708,27 @@
       if (prevBtn) prevBtn.disabled = (index === 0);
       if (nextBtn) nextBtn.disabled = (index === activeSteps.length - 1);
 
-      const wires = document.querySelectorAll('#svg-wires-group path');
-      wires.forEach(wire => {
-        wire.setAttribute('stroke', '#334155');
-        wire.setAttribute('marker-end', 'url(#arrow-neutral)');
-        wire.classList.remove('wire-active');
-      });
+      clearDiagramHighlights();
 
-      const labels = document.querySelectorAll('#svg-wires-group text');
-      labels.forEach(lbl => lbl.setAttribute('fill', '#64748b'));
-
-      const allBlockIds = ['block-cl', 'block-payer-app', 'block-payer-psp', 'block-central-switch', 'block-payee-psp', 'block-payer-bank', 'block-payer-hsm', 'block-payer-cbs', 'block-payee-bank', 'block-payee-cbs'];
-      allBlockIds.forEach(id => {
-        const b = document.getElementById(id);
-        if (b) {
-          const rect = b.querySelector('rect');
-          if (rect) {
-            rect.removeAttribute('stroke-dasharray');
-            rect.setAttribute('stroke-width', b.id.includes('central-switch') ? '4' : (b.id.includes('bank') || b.id.includes('psp') ? '3.5' : '2'));
-          }
-          b.classList.remove('scale-105');
-        }
-      });
-
+      const arrowNum = getArrowNum(step);
       step.activeWires.forEach(wId => {
         const el = document.getElementById(wId);
         if (el) {
           el.setAttribute('stroke', '#f97316');
+          el.setAttribute('stroke-width', '4');
           el.setAttribute('marker-end', 'url(#arrow-active)');
           el.classList.add('wire-active');
         }
         const lbl = document.getElementById(`label-${wId}`);
-        if (lbl) lbl.setAttribute('fill', '#f97316');
+        if (lbl) {
+          const nums = lbl.querySelectorAll('tspan[data-n]');
+          nums.forEach(t => {
+            if (nums.length === 1 || t.dataset.n === arrowNum) {
+              t.setAttribute('fill', '#fb923c');
+              t.setAttribute('font-weight', '900');
+            }
+          });
+        }
       });
 
       step.activeBlocks.forEach(bId => {
@@ -1698,10 +1736,10 @@
         if (el) {
           const rect = el.querySelector('rect');
           if (rect) {
-            rect.setAttribute('stroke-width', '4.5');
             rect.setAttribute('stroke', '#f97316');
+            rect.setAttribute('stroke-width', '5');
           }
-          el.classList.add('scale-105');
+          el.classList.add('block-active');
         }
       });
     }
@@ -1715,6 +1753,10 @@
         if (autoText) autoText.innerText = "Resume Simulation";
         if (autoIcon) autoIcon.setAttribute('data-lucide', 'play');
       } else {
+        if (currentStepIndex >= getActiveSteps().length) {
+          resetSimulation();
+          renderPhoneScreen('home-screen', { force: true });
+        }
         isAutoSimulating = true;
         const autoText = document.getElementById('btn-auto-text');
         const autoIcon = document.getElementById('btn-auto-icon');
@@ -1743,7 +1785,17 @@
           } else {
             delay = 2200; // Provide adequate time for the 6-digit ghost typing animation
           }
-        } else if (state === 'home-screen' || state === 'pay-init' || state.includes('select-acct')) {
+        } else if (state === 'pay-entry') {
+          delay = 3200; // typing animation + Verify tap
+        } else if (state === 'pay-verifying') {
+          delay = 1600; // processing animation
+        } else if (state === 'pay-amount') {
+          delay = 2000; // payee card + amount typing
+        } else if (state === 'pay-account') {
+          delay = 1900; // account tap
+        } else if (state === 'pay-proceed') {
+          delay = 1500; // Proceed to Pay tap
+        } else if (state === 'home-screen' || state.includes('select-acct')) {
           delay = 1000; // Give enough time for the initial UI button press animation
         } else if (state.startsWith('success')) {
           delay = 2500; // Linger slightly on success screens to view confetti
@@ -1762,6 +1814,23 @@
         if (autoIcon) autoIcon.setAttribute('data-lucide', 'rotate-ccw');
         lucide.createIcons();
       }
+    }
+
+    // Light / dark mode (chrome + diagram only; the phone screen is always light)
+    function updateThemeButton() {
+      const btn = document.getElementById('theme-toggle');
+      if (!btn) return;
+      const light = document.documentElement.classList.contains('light');
+      const label = light ? 'Switch to dark mode' : 'Switch to light mode';
+      btn.innerHTML = `<i data-lucide="${light ? 'moon' : 'sun'}" class="w-4 h-4"></i><span class="hidden sm:inline">${light ? 'Dark mode' : 'Light mode'}</span>`;
+      btn.setAttribute('aria-label', label);
+      btn.title = label;
+      lucide.createIcons();
+    }
+
+    function toggleTheme() {
+      document.documentElement.classList.toggle('light');
+      updateThemeButton();
     }
 
     // Modal Fullscreen controls (landscape blocker on mobile)
