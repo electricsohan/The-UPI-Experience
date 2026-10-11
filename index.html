@@ -107,6 +107,10 @@
     .screen-exit { animation: screen-exit 0.35s ease-in forwards; }
     .screen-enter-back { animation: screen-enter-back 0.4s ease-out both; }
 
+    /* Learn panel: description fades in */
+    @keyframes learn-fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+    .learn-fade { animation: learn-fade 0.25s ease-out both; }
+
     /* QR scanner sweep line */
     @keyframes scan-sweep { 0% { top: 0%; } 50% { top: calc(100% - 3px); } 100% { top: 0%; } }
     .scan-line {
@@ -212,7 +216,7 @@
         </div>
 
     <!-- Two-pane workspace: phone (left) + flow diagram (right) -->
-    <div class="flex-1 grid grid-cols-1 xl:grid-cols-[400px_minmax(0,1fr)] gap-4 sm:gap-6 min-h-0">
+    <div class="flex-1 grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)_minmax(0,4fr)] gap-4 sm:gap-6 min-h-0">
 
     
     <!-- ======================================================================= -->
@@ -224,7 +228,9 @@
         <div class="flex-1 flex items-center justify-center p-3">
       
       <!-- Terminal Device Outer Bezel -->
-      <div class="w-full max-w-[370px] h-[730px] rounded-[48px] p-3 bg-black border-4 border-neutral-800 shadow-2xl relative flex flex-col overflow-hidden">
+      <div id="phone-fit-outer" class="relative w-full" style="height:730px;">
+          <div id="phone-fit" style="position:absolute;left:50%;top:0;width:370px;height:730px;transform:translateX(-50%);transform-origin:top center;">
+      <div class="w-[370px] h-[730px] rounded-[48px] p-3 bg-black border-4 border-neutral-800 shadow-2xl relative flex flex-col overflow-hidden">
         
         <!-- Dynamic Camera Island -->
         <div class="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-5 bg-black border border-neutral-800 rounded-full z-40 flex items-center justify-center pointer-events-none">
@@ -273,6 +279,8 @@
         </div>
       </div>
 
+          </div>
+        </div>
         </div>
       </div>
     </section>
@@ -280,6 +288,24 @@
     <!-- ======================================================================= -->
     <!-- RIGHT PANE: SVG ARCHITECTURAL DIAGRAM                                   -->
     <!-- ======================================================================= -->
+    <section class="flex flex-col min-h-0">
+      <div class="learn-box flex-1 flex flex-col min-h-[420px] rounded-2xl overflow-hidden border border-gray-300 bg-gray-50 shadow-xl">
+        <div class="bg-gray-300 text-gray-800 px-4 py-2 text-sm font-bold border-b border-gray-400/50 shrink-0">Learn what happens</div>
+        <div class="relative flex-1 min-h-0">
+          <div id="learn-body" class="absolute inset-0 overflow-y-auto p-3">
+            <ol id="learn-list" class="space-y-2"></ol>
+            <div id="learn-wip" class="hidden rounded-xl border border-amber-300 bg-amber-50 p-4 text-center">
+              <div class="inline-flex items-center gap-2 text-amber-800 font-bold text-sm">
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+                Work in Progress
+              </div>
+              <p class="text-[11px] text-amber-700 mt-1 leading-snug">The step-by-step explanation for this flow is coming soon.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="flex flex-col min-h-0 gap-4">
       
       <!-- Flow Diagram Card (fills the whole right pane) -->
@@ -393,22 +419,29 @@
     let currentFlowType = 'pay';
     let currentStepIndex = 0;
     let autoSimTimer = null;
+    let endFlowTimer = null;   // clears the last arrow / Learn highlight shortly after the final step
     let isAutoSimulating = false;
 
-    // Confetti Burst Helper
+    // Confetti Burst Helper: drawn on a canvas inside the payer phone screen only (clipped to the screen)
     function triggerConfettiBurst() {
-      if (typeof confetti === 'function') {
+      if (typeof confetti !== 'function' || typeof confetti.create !== 'function') return;
+      // wait a tick so the success screen has been rendered into the phone container first
+      setTimeout(() => {
         try {
-          confetti({
-            particleCount: 80,
-            spread: 70,
-            origin: { y: 0.6 },
-            zIndex: 999
-          });
+          const container = document.getElementById('phone-display-container');
+          if (!container) return;
+          container.querySelectorAll('.confetti-canvas').forEach(c => c.remove());
+          const canvas = document.createElement('canvas');
+          canvas.className = 'confetti-canvas';
+          canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:50;';
+          container.appendChild(canvas);
+          const fire = confetti.create(canvas, { resize: true, useWorker: false });
+          fire({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+          setTimeout(() => { try { fire.reset(); } catch (e) {} canvas.remove(); }, 4500);
         } catch (e) {
           console.warn('Confetti error:', e);
         }
-      }
+      }, 30);
     }
 
     // =========================================================================
@@ -1740,6 +1773,17 @@
       }).join('');
     }
 
+    function highlightBlock(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const rect = el.querySelector('rect');
+      if (rect) {
+        rect.setAttribute('stroke', '#f97316');
+        rect.setAttribute('stroke-width', '5');
+      }
+      el.classList.add('block-active');
+    }
+
     function clearDiagramHighlights() {
       document.querySelectorAll('#svg-wires-group path').forEach(wire => {
         wire.setAttribute('stroke', '#475569');
@@ -1765,6 +1809,127 @@
     // =========================================================================
     // 4. BACKEND TAB CONTROLLER
     // =========================================================================
+    // ---- Learn what happens: six major steps, per flow ------------------------------------
+    // Sub-steps match either backend arrows (a: [from, to]) or phone screens (states: [...]).
+    function learnGroups(flow) {
+      const P = PAYEE[flow] || PAYEE.pay;
+      const isQr = flow === 'qr';
+      const isMobile = flow === 'mobile';
+      const entrySubs = isQr ? [
+        { tag: 'App', states: ['qr-scan'], title: 'Payer scans the merchant QR', text: 'The camera opens and scans the merchant\'s QR code, which carries the merchant\'s payment address and the amount.' },
+        { tag: 'App', states: ['qr-details'], title: 'Merchant name and amount returned', text: `The QR is decoded: merchant name ${P.name} is returned with the amount ₹${P.amount}.00 pre-filled.` }
+      ] : [
+        { tag: 'App', states: ['pay-entry'], title: isMobile ? 'Payer enters payee mobile number' : 'Payer enters payee VPA',
+          text: isMobile ? `The payer types the payee's mobile number (${P.mobileShown}) and taps Verify.` : `The payer types the payee's VPA (${P.input}) and taps Verify.` },
+        { tag: 'App', states: ['pay-verifying'], title: 'Payee name returned',
+          text: isMobile ? `After a short processing step, the payee name (${P.name}) and payee VPA (${P.vpa}) are returned.` : `After a short processing step, the payee name (${P.name}) is returned.` },
+        { tag: 'App', states: ['pay-amount'], title: 'Payer enters amount', text: `The payer enters the amount to send: ₹${P.amount}.00.` }
+      ];
+      return [
+        { title: 'Payment initiation', subs: entrySubs.concat([
+          { tag: 'App', states: ['pay-account', 'pay-proceed'], title: 'Payer selects bank account', text: 'The payer selects Bank A (•••• 4821) as the account to debit and taps Proceed to Pay.' },
+          { a: [1, 2], title: 'UPI PIN captured securely', text: 'The app hands over to an isolated Common Library screen. The PIN is encrypted with the bank\'s public key and the clear PIN is wiped from memory.' },
+          { a: [3], title: 'Payment sent to Payer PSP', text: 'The app dispatches the encrypted payment authorization to the payer\'s PSP.' },
+          { a: [4], title: 'PSP forwards to UPI Switch', text: 'The Payer PSP passes the request to the central switch with the payer VPA, payee VPA and bank code.' }
+        ])},
+        { title: 'Address Resolution', subs: [
+          { a: [5, 6], title: 'Payee address resolved', text: 'The switch asks the payee\'s PSP, using the handle after @, to validate the VPA. It replies with the beneficiary account and bank code (BIC).' }
+        ]},
+        { title: 'Debit and Authorization', subs: [
+          { a: [7], title: 'Debit request routed', text: 'The switch routes the debit request to the payer\'s bank using its bank code.' },
+          { a: [8, 9], title: 'PIN verified by HSM', text: 'The bank sends the encrypted PIN block to its Hardware Security Module, which checks it and returns an authorization signature.' },
+          { a: [10, 11], title: 'Payer account debited', text: 'The bank instructs its core banking system to debit ₹750.00. The CBS posts the entry, updates the balance and returns a journal reference.' },
+          { a: [12], title: 'Debit confirmed to Switch', text: 'The payer\'s bank sends the debit confirmation back to the switch.' }
+        ]},
+        { title: 'Credit', subs: [
+          { a: [13], title: 'Credit request routed', text: 'The switch forwards the credit instruction to the payee\'s bank.' },
+          { a: [14, 15], title: 'Payee account credited', text: 'The payee bank\'s core banking system posts the credit to the payee account and confirms it.' },
+          { a: [16], title: 'Credit confirmed to Switch', text: 'The payee\'s bank sends the credit acknowledgment to the switch.' }
+        ]},
+        { title: 'Payer gets confirmation', subs: [
+          { a: [17], title: 'Switch confirms to Payer PSP', text: 'The switch delivers the final clearing confirmation to the payer\'s PSP.' },
+          { a: [18], title: 'Receipt shown in the app', text: 'The Payer PSP forwards the success status to the app, which renders the payment receipt.' }
+        ]},
+        { title: 'Payee gets confirmations', subs: [
+          { a: [19], title: 'Payee PSP notified', text: 'The switch sends an asynchronous notification to the payee\'s PSP so the payee is told the money has arrived.' }
+        ]}
+      ];
+    }
+
+    const subTag = (sb) => sb.tag ? sb.tag : (sb.a[0] === sb.a[sb.a.length - 1] ? `#${sb.a[0]}` : `#${sb.a[0]}–${sb.a[sb.a.length - 1]}`);
+    const CHECK_SVG = '<svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>';
+
+    // Pure function: HTML for the list given the arrow / phone screen currently being shown
+    function learnListHtml(arrow, state, flow, allDone) {
+      const groups = learnGroups(flow || currentFlowType);
+      // locate the current sub-step: by arrow number when one is showing, otherwise by phone screen
+      let curG = -1, curS = -1;
+      groups.forEach((g, gi) => g.subs.forEach((sb, si) => {
+        const hit = arrow !== null
+          ? (sb.a && arrow >= sb.a[0] && arrow <= sb.a[sb.a.length - 1])
+          : (sb.states && state && sb.states.includes(state));
+        if (hit) { curG = gi; curS = si; }
+      }));
+      if (allDone) { curG = groups.length; curS = -1; }   // finished: every step shown as done, none highlighted
+      return groups.map((g, gi) => {
+        const active = gi === curG;
+        const done = curG !== -1 && gi < curG;
+        const badge = active ? 'bg-orange-500 text-white' : done ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-500';
+        const subs = active ? `<ul class="px-3 pb-3 space-y-1.5">${g.subs.map((sb, si) => {
+          const subActive = si === curS;
+          const subDone = si < curS;
+          const cls = subActive ? 'border-orange-500 bg-white shadow-sm' : subDone ? 'border-emerald-400 bg-white/70' : 'border-gray-200 bg-white/40';
+          const tcls = subActive ? 'text-gray-900' : subDone ? 'text-gray-600' : 'text-gray-400';
+          return `<li ${subActive ? 'data-active="1"' : ''} class="rounded-lg border-l-4 px-2.5 py-2 transition-all ${cls}">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-bold ${tcls}">${sb.title}</span>
+                <span class="text-[9px] font-mono ${subActive ? 'text-orange-600' : 'text-gray-400'}">${subTag(sb)}</span>
+              </div>
+              ${subActive ? `<p class="learn-fade text-[11px] text-gray-600 mt-1 leading-snug">${sb.text}</p>` : ''}
+            </li>`;
+        }).join('')}</ul>` : '';
+        return `<li ${active ? 'data-active="1"' : ''} class="rounded-xl border transition-all ${active ? 'border-orange-400 bg-orange-50 shadow-sm' : 'border-gray-200 bg-white'}">
+            <div class="flex items-center gap-3 px-3 py-2.5">
+              <span class="w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 ${badge}">${done ? CHECK_SVG : gi + 1}</span>
+              <div class="min-w-0">
+                <div class="text-[13px] font-bold ${active ? 'text-gray-900' : 'text-gray-600'}">${g.title}</div>
+              </div>
+            </div>
+            ${subs}
+          </li>`;
+      }).join('');
+    }
+
+    function updateLearnPanel(arrow, state, allDone) {
+      const list = document.getElementById('learn-list');
+      const wip = document.getElementById('learn-wip');
+      const body = document.getElementById('learn-body');
+      if (!list || !wip) return;
+      const supported = ['pay', 'mobile', 'qr'].includes(currentFlowType);
+      wip.classList.toggle('hidden', supported);
+      list.classList.toggle('hidden', !supported);
+      if (!supported) return;
+      const a = (arrow === null || arrow === undefined) ? null : parseInt(arrow, 10);
+      list.innerHTML = learnListHtml(a, state || null, currentFlowType, !!allDone);
+      // keep the active item visible inside the panel
+      const el = list.querySelector('li[data-active="1"] li[data-active="1"]') || list.querySelector('li[data-active="1"]');
+      if (el && body) {
+        const r = el.getBoundingClientRect(), br = body.getBoundingClientRect();
+        if (r.bottom > br.bottom) body.scrollTop += r.bottom - br.bottom + 8;
+        else if (r.top < br.top) body.scrollTop -= br.top - r.top + 8;
+      }
+    }
+
+    // Phone scales down to fit the narrower Journey column
+    function fitPhone() {
+      const outer = document.getElementById('phone-fit-outer');
+      const inner = document.getElementById('phone-fit');
+      if (!outer || !inner) return;
+      const scale = Math.min(1, outer.clientWidth / 370) || 1;
+      inner.style.transform = `translateX(-50%) scale(${scale})`;
+      outer.style.height = (730 * scale) + 'px';
+    }
+
     function setBackendTab(tab) {
       currentFlowType = tab;
       resetSimulation();
@@ -1793,6 +1958,7 @@
 
     function resetSimulation() {
       if (autoSimTimer) clearTimeout(autoSimTimer);
+      if (endFlowTimer) { clearTimeout(endFlowTimer); endFlowTimer = null; }
       isAutoSimulating = false;
       currentStepIndex = 0;
 
@@ -1802,6 +1968,8 @@
       if (autoIcon) autoIcon.setAttribute('data-lucide', 'play');
 
       clearDiagramHighlights();
+      highlightBlock('block-payer-app');   // every journey starts in the payer app
+      updateLearnPanel(null);
 
       const prevBtn = document.getElementById('btn-prev-step');
       const nextBtn = document.getElementById('btn-next-step');
@@ -1836,6 +2004,15 @@
       const step = activeSteps[index];
       if (!step) return;
 
+      if (endFlowTimer) { clearTimeout(endFlowTimer); endFlowTimer = null; }
+      if (index === activeSteps.length - 1) {
+        endFlowTimer = setTimeout(() => {
+          endFlowTimer = null;
+          clearDiagramHighlights();
+          updateLearnPanel(null, null, true);
+        }, 500);
+      }
+
       const badge = document.getElementById('fs-step-badge');
       const title = document.getElementById('fs-step-title');
       if (badge) badge.innerText = `STEP: ${step.stepNum} / ${activeSteps.length}`;
@@ -1851,6 +2028,7 @@
       clearDiagramHighlights();
 
       const arrowNum = getArrowNum(step);
+      updateLearnPanel(arrowNum, step.phoneState);
       step.activeWires.forEach(wId => {
         const el = document.getElementById(wId);
         if (el) {
@@ -1989,6 +2167,13 @@
       setBackendTab('pay');
       lucide.createIcons();
     });
+  
+    fitPhone();
+    window.addEventListener('resize', fitPhone);
+    if (typeof ResizeObserver !== 'undefined') {
+      const fitEl = document.getElementById('phone-fit-outer');
+      if (fitEl) new ResizeObserver(fitPhone).observe(fitEl);
+    }
   </script>
 </body>
 </html>
